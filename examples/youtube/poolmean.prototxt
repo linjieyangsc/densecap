@@ -1,0 +1,271 @@
+
+name: "mean_fc7_to_lstm"
+layer {
+  name: "data"
+  type: "HDF5Data"
+  top: "mean_fc7"
+  include { phase: TRAIN }
+  hdf5_data_param {
+    source:
+    "./hdf5/buffer_1_ytprepoolbasis_1/train_batches/hdf5_chunk_list.txt"
+    batch_size: 100
+  }
+}
+layer {
+  name: "data"
+  type: "HDF5Data"
+  top: "cont_sentence"
+  top: "input_sentence"
+  top: "target_sentence"
+  include { phase: TRAIN }
+  hdf5_data_param {
+    source: "./hdf5/buffer_100_ytprepool_20/train_batches/hdf5_chunk_list.txt"
+    batch_size: 20
+  }
+}
+layer {
+  name: "data"
+  type: "HDF5Data"
+  top: "mean_fc7"
+  include {
+    phase: TEST
+    stage: "test-on-train"
+  }
+  hdf5_data_param {
+    source:
+    "./hdf5/buffer_1_ytprepoolbasis_1/train_batches/hdf5_chunk_list.txt"
+    batch_size: 100
+  }
+}
+layer {
+  name: "data"
+  type: "HDF5Data"
+  top: "cont_sentence"
+  top: "input_sentence"
+  top: "target_sentence"
+  include {
+    phase: TEST
+    stage: "test-on-train"
+  }
+  hdf5_data_param {
+    source: ./hdf5/buffer_100_ytprepool_20/train_batches/hdf5_chunk_list.txt"
+    batch_size: 20
+  }
+}
+layer {
+  name: "data"
+  type: "HDF5Data"
+  top: "mean_fc7"
+  include {
+    phase: TEST
+    stage: "test-on-val"
+  }
+  hdf5_data_param {
+    source:
+    "./hdf5/buffer_1_ytprepoolbasis_1/valid_batches/hdf5_chunk_list.txt"
+    batch_size: 100
+  }
+}
+layer {
+  name: "data"
+  type: "HDF5Data"
+  top: "cont_sentence"
+  top: "input_sentence"
+  top: "target_sentence"
+  include {
+    phase: TEST
+    stage: "test-on-val"
+  }
+  hdf5_data_param {
+    source: "./hdf5/buffer_100_ytprepool_20/valid_batches/hdf5_chunk_list.txt"
+    batch_size: 20
+  }
+}
+
+# sentence generation layers
+layer {
+  name: "embedding"
+  type: "Embed"
+  bottom: "input_sentence"
+  top: "embedded_input_sentence"
+  param {
+    lr_mult: 1
+  }
+  embed_param {
+    bias_term: false
+    input_dim: 12594 #youtube_vocab+1
+    num_output: 1000
+    weight_filler {
+      type: "uniform"
+      min: -0.08
+      max: 0.08
+    }
+  }
+}
+layer {
+  name: "lstm1"
+  type: "LSTM"
+  bottom: "embedded_input_sentence"
+  bottom: "cont_sentence"
+  bottom: "mean_fc7"
+  top: "lstm1"
+  include { stage: "unfactored" }
+  recurrent_param {
+    num_output: 1000
+    weight_filler {
+      type: "uniform"
+      min: -0.08
+      max: 0.08
+    }
+    bias_filler {
+      type: "constant"
+      value: 0
+    }
+  }
+}
+layer {
+  name: "lstm2"
+  type: "LSTM"
+  bottom: "lstm1"
+  bottom: "cont_sentence"
+  top: "lstm2"
+  include {
+    stage: "unfactored"
+    stage: "2-layer"
+  }
+  recurrent_param {
+    num_output: 1000
+    weight_filler {
+      type: "uniform"
+      min: -0.08
+      max: 0.08
+    }
+    bias_filler {
+      type: "constant"
+      value: 0
+    }
+  }
+}
+layer {
+  name: "lstm1"
+  type: "LSTM"
+  bottom: "embedded_input_sentence"
+  bottom: "cont_sentence"
+  top: "lstm1"
+  include { stage: "factored" }
+  recurrent_param {
+    num_output: 1000
+    weight_filler {
+      type: "uniform"
+      min: -0.08
+      max: 0.08
+    }
+    bias_filler {
+      type: "constant"
+      value: 0
+    }
+  }
+}
+layer {
+  name: "lstm2"
+  type: "LSTM"
+  bottom: "lstm1"
+  bottom: "cont_sentence"
+  bottom: "mean_fc7"
+  top: "lstm2"
+  include { stage: "factored" }
+  recurrent_param {
+    num_output: 1000
+    weight_filler {
+      type: "uniform"
+      min: -0.08
+      max: 0.08
+    }
+    bias_filler {
+      type: "constant"
+      value: 0
+    }
+  }
+}
+layer {
+  name: "predict"
+  type: "InnerProduct"
+  bottom: "lstm1"
+  top: "predict"
+  param {
+    lr_mult: 1
+    decay_mult: 1
+  }
+  param {
+    lr_mult: 2
+    decay_mult: 0
+  }
+  exclude { stage: "2-layer" }
+  inner_product_param {
+    num_output: 12594 # youtube_vocab + 1
+    weight_filler {
+      type: "uniform"
+      min: -0.08
+      max: 0.08
+    }
+    bias_filler {
+      type: "constant"
+      value: 0
+    }
+    axis: 2
+  }
+}
+layer {
+  name: "predict"
+  type: "InnerProduct"
+  bottom: "lstm2"
+  top: "predict"
+  param {
+    lr_mult: 1
+    decay_mult: 1
+  }
+  param {
+    lr_mult: 2
+    decay_mult: 0
+  }
+  include { stage: "2-layer" }
+  inner_product_param {
+    num_output: 12594 # youtube_vocab + 1
+    weight_filler {
+      type: "uniform"
+      min: -0.08
+      max: 0.08
+    }
+    bias_filler {
+      type: "constant"
+      value: 0
+    }
+    axis: 2
+  }
+}
+layer {
+  name: "softmax_loss"
+  type: "SoftmaxWithLoss"
+  bottom: "predict"
+  bottom: "target_sentence"
+  top: "softmax_loss"
+  loss_weight: 20
+  loss_param {
+    ignore_label: -1
+  }
+  softmax_param {
+    axis: 2
+  }
+}
+layer {
+  name: "accuracy"
+  type: "Accuracy"
+  bottom: "predict"
+  bottom: "target_sentence"
+  top: "accuracy"
+  include { phase: TEST }
+  accuracy_param {
+    axis: 2
+    ignore_label: -1
+  }
+}
