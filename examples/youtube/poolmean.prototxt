@@ -1,3 +1,9 @@
+# The network is used for the video description experiments in [1].
+# Please consider citing [1] if you use this example in your work.
+#
+# [1] S. Venugopalan, H. Xu, J. Donahue, M. Rohrbach, R. Mooney, K.Saenko.
+#     "Translating Videos to Natural Language using Deep Recurrrent Neural
+#     Networks." NAACL-HLT 2015.
 
 name: "mean_fc7_to_lstm"
 layer {
