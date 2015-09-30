@@ -1,0 +1,33 @@
+net: "./s2vt_e2e.prototxt"
+
+# s2vt_e2e.prototxt supports three variants of the s2vt end2end architecture:
+# (1) stage: 'factored' stage: '2-layer'
+# (2) stage: 'unfactored' stage: '1-layer'
+# (3) stage: 'unfactored' stage: '2-layer'
+# Optional:
+# (a) stage: 'freeze-convnet'  [to freeze convnet during training]
+# This solver uses variant (1).
+# To use a different variant, modify the states (train_state, test_state)
+# below as appropriate:
+
+train_state: { stage: 'freeze-convnet' stage: 'factored' stage: '2-layer' }
+test_iter: 25
+test_state: { stage: 'freeze-convnet' stage: 'factored' stage: '2-layer' stage: 'test-on-train' }
+test_iter: 25
+test_state: { stage: 'factored' stage: '2-layer' stage: 'test-on-val' }
+test_interval: 1000
+iter_size: 2 # accumulate gradients to 2 batches before updating
+base_lr: 0.01
+lr_policy: "step"
+gamma: 0.5
+stepsize: 20000
+display: 1
+max_iter: 40000
+momentum: 0.9
+weight_decay: 0.0000
+snapshot: 1000
+snapshot_prefix: "./snapshots/s2vt_E2E_factored_2layer"
+solver_mode: GPU
+random_seed: 1701
+average_loss: 100
+clip_gradients: 10
