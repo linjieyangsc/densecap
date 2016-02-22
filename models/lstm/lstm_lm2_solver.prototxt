@@ -1,0 +1,21 @@
+net: "./models/lstm/sent_lstm_lm2.prototxt"
+train_state: { stage: 'embed-drop' stage: 'lstm-drop' }
+test_iter: 25
+test_state: { stage: 'test-on-train' }
+test_iter: 25
+test_state: { stage: 'test-on-val' }
+test_interval: 10000
+base_lr: 0.1
+lr_policy: "step"
+gamma: 0.5
+stepsize: 50000
+display: 20
+max_iter: 250000
+momentum: 0.9
+weight_decay: 0.0000
+snapshot: 50000
+snapshot_prefix: "./models/lstm/sent_lstm_lm2"
+solver_mode: GPU
+random_seed: 1701
+average_loss: 100
+clip_gradients: 10
