@@ -201,6 +201,22 @@ class LSTMLayer : public RecurrentLayer<Dtype> {
   virtual void OutputBlobNames(vector<string>* names) const;
 };
 
+template <typename Dtype>
+class SLSTMLayer : public RecurrentLayer<Dtype> {
+ public:
+  explicit SLSTMLayer(const LayerParameter& param)
+      : RecurrentLayer<Dtype>(param) {}
+
+  virtual inline const char* type() const { return "SLSTM"; }
+
+ protected:
+  virtual void FillUnrolledNet(NetParameter* net_param) const;
+  virtual void RecurrentInputBlobNames(vector<string>* names) const;
+  virtual void RecurrentOutputBlobNames(vector<string>* names) const;
+  virtual void RecurrentInputShapes(vector<BlobShape>* shapes) const;
+  virtual void OutputBlobNames(vector<string>* names) const;
+};
+
 /**
  * @brief A helper for LSTMLayer: computes a single timestep of the
  *        non-linearity of the LSTM, producing the updated cell and hidden

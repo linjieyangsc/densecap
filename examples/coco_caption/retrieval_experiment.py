@@ -306,7 +306,7 @@ def main():
     MODEL_FILENAME = 'lrcn_finetune_trainval_stepsize40k_iter_%d' % ITER
     DATASET_NAME = 'test'
   else:  # eval on val
-    ITER = 50000
+    ITER = 10000
     MODEL_FILENAME = 'lrcn_finetune_iter_%d' % ITER
     DATASET_NAME = 'val'
   TAG += '_%s' % DATASET_NAME

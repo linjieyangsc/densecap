@@ -118,6 +118,7 @@ class HDF5SequenceWriter():
           print 'batch %d, stream %s, index %d: ' % (batch_index, key, s), stream
       h5dataset = h5file.create_dataset(key, shape=batch.shape, dtype=batch.dtype)
       h5dataset[:] = batch
+    h5file.flush()
     h5file.close()
 
   def write_to_exhaustion(self):

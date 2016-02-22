@@ -41,7 +41,7 @@ layer {
     
     batch_size: 50
     new_height: 300
-    new_width: 256
+    new_width: 228
 #    root_folder: "/media/researchshare/linjie/data/dreamstime/images/"
   }
 }

@@ -296,7 +296,8 @@ def gen_stats(prob):
   return stats
 
 def main():
-  MAX_IMAGES = -1  # -1 to use all images
+  MAX_IMAGES = 100  # -1 to use all images
+  USE_LIST = True
   TAG = 'coco_2layer_factored'
   if MAX_IMAGES >= 0:
     TAG += '_%dimages' % MAX_IMAGES
@@ -306,7 +307,7 @@ def main():
     MODEL_FILENAME = 'lrcn_finetune_trainval_stepsize40k_iter_%d' % ITER
     DATASET_NAME = 'test'
   else:  # eval on val
-    ITER = 10000
+    ITER = 40000
     MODEL_FILENAME = 'lrcn_finetune_vgg_iter_%d' % ITER
     DATASET_NAME = 'val'
   TAG += '_%s' % DATASET_NAME
@@ -336,6 +337,8 @@ def main():
     all_keys = dataset.keys()
     perm = np.random.permutation(len(all_keys))[:MAX_IMAGES]
     chosen_keys = set([all_keys[p] for p in perm])
+    if USE_LIST:
+    	chosen_keys = pickle.load(open('/home/a-linjieyang/work/video_caption/selected_ids','rb')) 
     for key in all_keys:
       if key not in chosen_keys:
         del dataset[key]

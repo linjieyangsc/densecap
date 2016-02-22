@@ -9,8 +9,8 @@ import sys
 
 sys.path.append('./examples/coco_caption/')
 
-COCO_PATH = '/media/researchshare/linjie/data/MS_COCO/'
-COCO_TOOL_PATH = '%scoco/PythonAPI/' % COCO_PATH
+COCO_PATH = '/media/researchshare/linjie/data/MS_COCO'
+COCO_TOOL_PATH = '%s/coco/PythonAPI/' % COCO_PATH
 COCO_IMAGE_ROOT = '%s/images' % COCO_PATH
 
 MAX_HASH = 100000

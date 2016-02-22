@@ -296,7 +296,8 @@ def gen_stats(prob):
   return stats
 
 def main():
-  MAX_IMAGES = -1  # -1 to use all images
+  MAX_IMAGES = 100#100  # -1 to use all images
+  USE_LIST = True
   TAG = 'coco_2layer_factored'
   if MAX_IMAGES >= 0:
     TAG += '_%dimages' % MAX_IMAGES
@@ -306,19 +307,19 @@ def main():
     MODEL_FILENAME = 'lrcn_finetune_trainval_stepsize40k_iter_%d' % ITER
     DATASET_NAME = 'test'
   else:  # eval on val
-    ITER = 10000
-    MODEL_FILENAME = 'lrcn_finetune_vgg_iter_%d' % ITER
+    ITER = 200000
+    MODEL_FILENAME = 'lrcn_vgg_iter_%d' % ITER
     DATASET_NAME = 'val'
   TAG += '_%s' % DATASET_NAME
-  MODEL_DIR = './examples/coco_caption'
+  MODEL_DIR = './models/lstm'
   MODEL_FILE = '%s/%s.caffemodel' % (MODEL_DIR, MODEL_FILENAME)
   IMAGE_NET_FILE = './models/vggnet/deploy.prototxt'
-  LSTM_NET_FILE = './examples/coco_caption/lrcn_word_to_preds.deploy.prototxt'
+  LSTM_NET_FILE = './models/lstm/lrcn_word_to_preds.deploy.prototxt'
   NET_TAG = '%s_%s' % (TAG, MODEL_FILENAME)
   DATASET_SUBDIR = '%s/%s_ims' % (DATASET_NAME,
       str(MAX_IMAGES) if MAX_IMAGES >= 0 else 'all')
   DATASET_CACHE_DIR = './retrieval_cache/%s/%s' % (DATASET_SUBDIR, MODEL_FILENAME)
-  VOCAB_FILE = './examples/coco_caption/h5_data/buffer_100/vocabulary.txt'
+  VOCAB_FILE = './models/lstm/vocab.txt'
   DEVICE_ID = 3
   with open(VOCAB_FILE, 'r') as vocab_file:
     vocab = [line.strip() for line in vocab_file.readlines()]
@@ -336,6 +337,11 @@ def main():
     all_keys = dataset.keys()
     perm = np.random.permutation(len(all_keys))[:MAX_IMAGES]
     chosen_keys = set([all_keys[p] for p in perm])
+    #use pre-defined list
+    if USE_LIST:
+      chosen_keys = pickle.load(open('/home/a-linjieyang/work/video_caption/selected_ids','rb'))
+      print chosen_keys[0]
+      print all_keys[0]
     for key in all_keys:
       if key not in chosen_keys:
         del dataset[key]
@@ -343,7 +349,7 @@ def main():
   if MAX_IMAGES < 0: MAX_IMAGES = len(dataset.keys())
   captioner = Captioner(MODEL_FILE, IMAGE_NET_FILE, LSTM_NET_FILE, VOCAB_FILE,
                         device_id=DEVICE_ID)
-  beam_size = 1
+  beam_size = 5
   generation_strategy = {'type': 'beam', 'beam_size': beam_size}
   if generation_strategy['type'] == 'beam':
     strategy_name = 'beam%d' % generation_strategy['beam_size']

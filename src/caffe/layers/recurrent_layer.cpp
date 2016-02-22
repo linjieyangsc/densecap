@@ -15,7 +15,7 @@ string RecurrentLayer<Dtype>::int_to_str(const int t) const {
   ostringstream num;
   num << t;
   return num.str();
-}
+} 
 
 template <typename Dtype>
 void RecurrentLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bottom,

@@ -121,10 +121,10 @@ class DtSequenceGenerator(SequenceGenerator):
 
 
 #
-BUFFER_SIZE=50
-OUTPUT_DIR = './models/lstm/h5_data/buffer_%d' % BUFFER_SIZE
+BUFFER_SIZE=100
+OUTPUT_DIR = './models/lstm/h5_data_distill/buffer_%d' % (BUFFER_SIZE)
 SPLITS_PATTERN = '/home/a-linjieyang/work/video_caption/dreamstime/%s_list.txt'
-SPLITS_CAP_PATTERN = '/home/a-linjieyang/work/video_caption/dreamstime/%s_list_cap.txt'
+SPLITS_CAP_PATTERN = '/home/a-linjieyang/work/video_caption/dreamstime/%s_list_cap_filt.txt'
 OUTPUT_DIR_PATTERN = '%s/%%s_batches' % OUTPUT_DIR
 VOCAB_OUT_PATH = '%s/vocabulary' % OUTPUT_DIR
 def process_dataset(split_name, dt_split_name, batch_stream_length, vocab=None):
@@ -149,8 +149,8 @@ def process_dataset(split_name, dt_split_name, batch_stream_length, vocab=None):
 def process_dreamstime():
 	vocab=None
 	datasets = [
-	('train','train',1000000),
-	('val','val',126746),
+	('train','train',100000),
+	('val','val',100000),
 	]
 	for split_name, dt_split_name, batch_stream_length in datasets:
 		vocab = process_dataset(split_name, dt_split_name, batch_stream_length,

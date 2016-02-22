@@ -11,7 +11,7 @@ import sys
 
 sys.path.append('./python/')
 import caffe
-
+REMOVE_UNK = True
 class Captioner():
   def __init__(self, weights_path, image_net_proto, lstm_net_proto,
                vocab_path, device_id=-1):
@@ -38,6 +38,7 @@ class Captioner():
     self.vocab = ['<EOS>']
     with open(vocab_path, 'r') as vocab_file:
       self.vocab += [word.strip() for word in vocab_file.readlines()]
+    assert(self.vocab[1] == '<unk>')
     net_vocab_size = self.lstm_net.blobs['predict'].data.shape[2]
     if len(self.vocab) != net_vocab_size:
       raise Exception('Invalid vocab file: contains %d words; '
@@ -98,6 +99,11 @@ class Captioner():
     net.forward(image_features=image_features, cont_sentence=cont_input,
                 input_sentence=word_input)
     output_preds = net.blobs[output].data[0, 0, :]
+    #remove unknow tag?
+    
+    #if REMOVE_UNK: 
+    #  output_preds[1] = 0.0
+     # output_preds = output_preds / output_preds.sum()
     return output_preds
 
   def predict_single_word_from_all_previous(self, descriptor, previous_words):
@@ -138,7 +144,7 @@ class Captioner():
       probs.append(softmax(softmax_inputs, 1.0)[word])
     return sentence, probs
 
-  def predict_caption_beam_search(self, descriptor, strategy, max_length=50):
+  def predict_caption_beam_search(self, descriptor, strategy, max_length=30):
     orig_batch_size = self.caption_batch_size()
     if orig_batch_size != 1: self.set_caption_batch_size(1)
     beam_size = strategy['beam_size'] if 'beam_size' in strategy else 1
@@ -170,11 +176,13 @@ class Captioner():
         assert probs.shape[0] == len(self.vocab)
         expansion_inds = probs.argsort()[-beam_size:]
         for ind in expansion_inds:
-          prob = probs[ind]
-          extended_beam_log_prob = beam_log_prob + math.log(prob)
-          exp = {'prefix_beam_index': beam_index, 'extension': [ind],
-                 'prob_extension': [prob], 'log_prob': extended_beam_log_prob}
-          expansions.append(exp)
+	  if not (REMOVE_UNK and ind==1):
+            assert(self.vocab[ind] !='<unk>')
+            prob = probs[ind]
+            extended_beam_log_prob = beam_log_prob + math.log(prob)
+            exp = {'prefix_beam_index': beam_index, 'extension': [ind],
+	       'prob_extension': [prob], 'log_prob': extended_beam_log_prob}
+            expansions.append(exp)
       # Sort expansions in decreasing order of probability.
       expansions.sort(key=lambda expansion: -1 * expansion['log_prob'])
       expansions = expansions[:beam_size]
@@ -361,6 +369,13 @@ def softmax(softmax_inputs, temp):
 
 def random_choice_from_probs(softmax_inputs, temp=1, already_softmaxed=False):
   # temperature of infinity == take the max
+  if REMOVE_UNK:
+    if already_softmaxed:
+      softmax_inputs[1] = 0.0
+      softmax_inputs = softmax_inputs / softmax_inputs.sum()
+    else:
+      softmax_inputs[1] = -20.0
+
   if temp == float('inf'):
     return np.argmax(softmax_inputs)
   if already_softmaxed:
@@ -369,11 +384,12 @@ def random_choice_from_probs(softmax_inputs, temp=1, already_softmaxed=False):
   else:
     probs = softmax(softmax_inputs, temp)
   r = random.random()
+  
   cum_sum = 0.
   for i, p in enumerate(probs):
     cum_sum += p
     if cum_sum >= r: return i
-  return 1  # return UNK?
+  return 0  # return eos?
 
 def gen_stats(prob, normalizer=None):
   stats = {}

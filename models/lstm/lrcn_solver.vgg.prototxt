@@ -19,10 +19,10 @@ lr_policy: "step"
 gamma: 0.5
 stepsize: 100000
 display: 20
-max_iter: 500000
+max_iter: 400000
 momentum: 0.9
 weight_decay: 0.0000
-snapshot: 100000
+snapshot: 50000
 snapshot_prefix: "./models/lstm/lrcn_vgg"
 solver_mode: GPU
 random_seed: 1701
