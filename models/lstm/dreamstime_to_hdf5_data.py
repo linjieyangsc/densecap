@@ -35,7 +35,7 @@ class DtSequenceGenerator(SequenceGenerator):
 			print "The least frequent word in our vocabulary is '%s' and appeared %d times." % \
 			(vocab_freq[-1][0], vocab_freq[-1][1])
 		else:
-			self. vocabulary_inverted = vocab
+			self.vocabulary_inverted = vocab
 		
 		
 		self.vocabulary = dict([(w,i) for i,w in enumerate(self.vocabulary_inverted)])
@@ -121,12 +121,12 @@ class DtSequenceGenerator(SequenceGenerator):
 
 
 #
-BUFFER_SIZE=100
+BUFFER_SIZE=50
 OUTPUT_DIR = './models/lstm/h5_data_distill/buffer_%d' % (BUFFER_SIZE)
 SPLITS_PATTERN = '/home/a-linjieyang/work/video_caption/dreamstime/%s_list.txt'
 SPLITS_CAP_PATTERN = '/home/a-linjieyang/work/video_caption/dreamstime/%s_list_cap_filt.txt'
 OUTPUT_DIR_PATTERN = '%s/%%s_batches' % OUTPUT_DIR
-VOCAB_OUT_PATH = '%s/vocabulary' % OUTPUT_DIR
+VOCAB_OUT_PATH = './models/lstm/h5_data_distill/buffer_100/vocabulary' 
 def process_dataset(split_name, dt_split_name, batch_stream_length, vocab=None):
 	with open(SPLITS_PATTERN % split_name, 'r') as split_file:
 		split_images = [line[:-1] for line in split_file]
@@ -148,6 +148,10 @@ def process_dataset(split_name, dt_split_name, batch_stream_length, vocab=None):
 	return sg.vocabulary_inverted
 def process_dreamstime():
 	vocab=None
+	vocab = []
+	with open(VOCAB_OUT_PATH,'r') as f:
+		for line in f:
+			vocab.append(line.strip())
 	datasets = [
 	('train','train',100000),
 	('val','val',100000),

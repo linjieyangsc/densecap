@@ -11,7 +11,7 @@ if [ ! -d $DATA_DIR ]; then
     exit 1
 fi
 
-./build/tools/caffe train \
+../caffe-research/build/tools/caffe train \
     -solver ./models/lstm/lrcn_finetune_solver.vgg.prototxt \
     -weights $WEIGHTS \
     -gpu $GPU_ID

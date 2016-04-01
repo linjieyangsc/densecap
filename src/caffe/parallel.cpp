@@ -221,7 +221,7 @@ P2PSync<Dtype>::P2PSync(shared_ptr<Solver<Dtype> > root_solver,
     solver_ = root_solver;
   } else {
     Caffe::set_root_solver(false);
-    solver_.reset(new WorkerSolver<Dtype>(param, root_solver.get()));
+    solver_.reset(new WorkerSolver<Dtype>(param, root_solver.get()));    
     Caffe::set_root_solver(true);
   }
   this->configure(solver_.get());
@@ -385,7 +385,7 @@ void P2PSync<Dtype>::on_gradients_ready() {
 
 template<typename Dtype>
 void P2PSync<Dtype>::run(const vector<int>& gpus) {
-  // Pair devices for map-reduce synchronization
+  // Pair devices for map-reduce synchronization 
   vector<DevicePair> pairs;
   DevicePair::compute(gpus, &pairs);
   ostringstream s;

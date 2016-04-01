@@ -156,6 +156,7 @@ class CaptionExperiment():
 
     # Generate captions for all images.
     all_captions = [None] * num_images
+    all_logprobs = np.zeros((num_images))
     for image_index in xrange(0, num_images, batch_size):
       batch_end_index = min(image_index + batch_size, num_images)
       sys.stdout.write("\rGenerating captions for image %d/%d" %
@@ -183,6 +184,8 @@ class CaptionExperiment():
                 (best_caption is not None and log_prob > max_log_prob):
               best_caption, max_log_prob = caption, log_prob
           all_captions[batch_image_index] = best_caption
+	  all_logprobs[batch_image_index] = max_log_prob
+
     sys.stdout.write('\n')
 
     # Compute the number of reference files as the maximum number of ground
@@ -213,7 +216,8 @@ class CaptionExperiment():
     generation_result = [{
       'image_id': image_ids[image_index],
       'image_path': image_path,
-      'caption': model_captions[image_index]
+      'caption': model_captions[image_index],
+      'logprob': all_logprobs[image_index]
     } for (image_index, image_path) in enumerate(self.images)]
     json_filename = '%s/generation_result.json' % self.cache_dir
     print 'Dumping result to file: %s' % json_filename
@@ -254,8 +258,8 @@ def main():
     MODEL_FILENAME = 'lrcn_finetune_trainval_stepsize40k_iter_%d' % ITER
     DATASET_NAME = 'test'
   else:  # eval on val
-    ITER = 70000
-    MODEL_FILENAME = 'lrcn_finetune_vgg_iter_%d' % ITER
+    ITER = 100000
+    MODEL_FILENAME = 'lrcn2_finetune3_vgg_iter_%d' % ITER
     DATASET_NAME = 'snapchat'
   TAG += '_%s' % DATASET_NAME
   MODEL_DIR = './models/lstm'
@@ -266,14 +270,14 @@ def main():
   DATASET_SUBDIR = '%s/%s_ims' % (DATASET_NAME,
       str(MAX_IMAGES) if MAX_IMAGES >= 0 else 'all')
   DATASET_CACHE_DIR = './retrieval_cache/%s/%s' % (DATASET_SUBDIR, MODEL_FILENAME)
-  VOCAB_FILE = './models/lstm/vocab.txt'
+  VOCAB_FILE = './models/lstm/h5_data_distill/buffer_100/vocabulary'
   #VOCAB_FILE = './models/lstm/h5_data_distill/buffer_100/vocabulary'
   DEVICE_ID = 4
   with open(VOCAB_FILE, 'r') as vocab_file:
     vocab = [line.strip() for line in vocab_file.readlines()]
   #coco = COCO(COCO_ANNO_PATH % DATASET_NAME)
   #image_root = '/media/researchshare/linjie/data/dreamstime/images'#COCO_IMAGE_PATTERN % DATASET_NAME
-  eval_image_file = '/home/a-linjieyang/work/video_caption/snapchat/test_im_list_cap.txt'
+  eval_image_file = '/home/a-linjieyang/work/video_caption/snapchat/cluster_im_list.txt'
   #eval_caption_file = '/home/a-linjieyang/work/video_caption/dreamstime/val_list_cap.txt'
   with open(eval_image_file, 'r') as split_file:
     split_images = [line.strip() for line in split_file]

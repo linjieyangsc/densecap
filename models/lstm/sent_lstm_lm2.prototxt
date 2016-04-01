@@ -7,7 +7,7 @@ layer {
   top: "target_sentence"
   include { phase: TRAIN }
   hdf5_data_param {
-    source: "./models/lstm/h5_data_lm/buffer_100_vocab_20000/train_30_batches/hdf5_chunk_list.txt"
+    source: "./models/lstm/h5_data_par/buffer_100_vocab_20000/train_30_batches/hdf5_chunk_list.txt"
     batch_size: 20
   }
 }
@@ -22,7 +22,7 @@ layer {
     stage: "test-on-train"
   }
   hdf5_data_param {
-    source: "./models/lstm/h5_data_lm/buffer_100_vocab_20000/train_30_batches/hdf5_chunk_list.txt"
+    source: "./models/lstm/h5_data_par/buffer_100_vocab_20000/train_30_batches/hdf5_chunk_list.txt"
     batch_size: 20
   }
 }
@@ -37,7 +37,7 @@ layer {
     stage: "test-on-val"
   }
   hdf5_data_param {
-    source: "./models/lstm/h5_data_lm/buffer_100_vocab_20000/val_30_batches/hdf5_chunk_list.txt"
+    source: "./models/lstm/h5_data_par/buffer_100_vocab_20000/val_30_batches/hdf5_chunk_list.txt"
     batch_size: 20
   }
 }
@@ -70,7 +70,7 @@ layer {
 }
 layer {
   name: "lstm1"
-  type: "SLSTM"
+  type: "LSTM"
   bottom: "embedded_input_sentence"
   bottom: "cont_sentence"
   top: "lstm1"
@@ -97,7 +97,7 @@ layer {
 }
 layer {
   name: "lstm2"
-  type: "SLSTM"
+  type: "LSTM"
   bottom: "lstm1"
   bottom: "cont_sentence"
   top: "lstm2"

@@ -16,15 +16,15 @@ from composer import Composer
 
 def main(): 
   
-  ITER = 250000
-  MODEL_FILENAME = 'sent_lstm_lm_iter_%d' % ITER
+  ITER = 100000
+  MODEL_FILENAME = 'sent_lstm_lm2_par_iter_%d' % ITER
 
-  
+  DATA_DIR = 'h5_data_par/buffer_100_vocab_10000'
   MODEL_DIR = './models/lstm'
   MODEL_FILE = '%s/%s.caffemodel' % (MODEL_DIR, MODEL_FILENAME)
-  LSTM_NET_FILE = './models/lstm/sent_lstm_lm.deploy.prototxt'
+  LSTM_NET_FILE = './models/lstm/sent_lstm_lm2.deploy.prototxt'
   
-  VOCAB_FILE = '/home/a-linjieyang/work/skip-thoughts/training/vocabulary.txt'
+  VOCAB_FILE = '%s/%s/vocabulary' % (MODEL_DIR, DATA_DIR)
   DEVICE_ID = 4
   with open(VOCAB_FILE, 'r') as vocab_file:
     vocab = [line.strip() for line in vocab_file.readlines()]
@@ -38,8 +38,11 @@ def main():
   comp = Composer(MODEL_FILE, LSTM_NET_FILE, VOCAB_FILE,
                         device_id=DEVICE_ID)
   beam_size = 1
+  temp = 1
+  if (len(sys.argv)>3):
+  	temp = int(sys.argv[3])
   #generation_strategy = {'type': 'beam', 'beam_size': sample_n}
-  generation_strategy = {'type': 'sample', 'num': sample_n,'temp': 1} 
+  generation_strategy = {'type': 'sample', 'num': sample_n,'temp': temp} 
   seed_sent = comp.tokenize(seed_sent)
   samples, probs = comp.predict_caption(seed_sent, strategy=generation_strategy)
   #calculate logprob

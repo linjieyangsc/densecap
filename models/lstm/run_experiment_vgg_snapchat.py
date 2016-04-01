@@ -7,7 +7,7 @@ import pprint
 import cPickle as pickle
 import string
 import sys
-
+import time
 # seed the RNG so we evaluate on the same subset each time
 np.random.seed(seed=0)
 sys.path.append('./examples/coco_caption/')  
@@ -153,7 +153,7 @@ class CaptionExperiment():
 
     num_images = len(self.images)
     batch_size = min(max_batch_size, num_images) if do_batches else 1
-
+    t1 =time.time()
     # Generate captions for all images.
     all_captions = [None] * num_images
     for image_index in xrange(0, num_images, batch_size):
@@ -184,7 +184,8 @@ class CaptionExperiment():
               best_caption, max_log_prob = caption, log_prob
           all_captions[batch_image_index] = best_caption
     sys.stdout.write('\n')
-
+    t2 = time.time()
+    print "%f seconds elapsed" % (t2-t1)
     # Compute the number of reference files as the maximum number of ground
     # truth captions of any image in the dataset.
     num_reference_files = 1 # only 1 captions for dreamstime
@@ -254,8 +255,8 @@ def main():
     MODEL_FILENAME = 'lrcn_finetune_trainval_stepsize40k_iter_%d' % ITER
     DATASET_NAME = 'test'
   else:  # eval on val
-    ITER = 300000
-    MODEL_FILENAME = 'lrcn_vgg_iter_%d' % ITER
+    ITER = 100000
+    MODEL_FILENAME = 'lrcn2_finetune3_vgg_iter_%d' % ITER
     DATASET_NAME = 'snapchat'
   TAG += '_%s' % DATASET_NAME
   MODEL_DIR = './models/lstm'
@@ -266,8 +267,8 @@ def main():
   DATASET_SUBDIR = '%s/%s_ims' % (DATASET_NAME,
       str(MAX_IMAGES) if MAX_IMAGES >= 0 else 'all')
   DATASET_CACHE_DIR = './retrieval_cache/%s/%s' % (DATASET_SUBDIR, MODEL_FILENAME)
-  VOCAB_FILE = './models/lstm/vocab.txt'
-  DEVICE_ID = 4
+  VOCAB_FILE = './models/lstm/h5_data_distill/buffer_100/vocabulary'
+  DEVICE_ID = 1
   with open(VOCAB_FILE, 'r') as vocab_file:
     vocab = [line.strip() for line in vocab_file.readlines()]
   #coco = COCO(COCO_ANNO_PATH % DATASET_NAME)
@@ -298,7 +299,7 @@ def main():
   if MAX_IMAGES < 0: MAX_IMAGES = len(dataset.keys())
   captioner = Captioner(MODEL_FILE, IMAGE_NET_FILE, LSTM_NET_FILE, VOCAB_FILE,
                         device_id=DEVICE_ID)
-  beam_size = 5
+  beam_size = 2
 
   generation_strategy = {'type': 'beam', 'beam_size': beam_size}
   if generation_strategy['type'] == 'beam':
@@ -310,6 +311,7 @@ def main():
   CACHE_DIR = '%s/%s' % (DATASET_CACHE_DIR, strategy_name)
   experimenter = CaptionExperiment(captioner, dataset, DATASET_CACHE_DIR, CACHE_DIR, sg)
   captioner.set_image_batch_size(min(100, MAX_IMAGES))
+  
   experimenter.generation_experiment(generation_strategy)
   captioner.set_caption_batch_size(min(MAX_IMAGES * 5, 1000))
   #experimenter.retrieval_experiment()

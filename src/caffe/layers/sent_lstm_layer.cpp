@@ -199,7 +199,6 @@ void SLSTMLayer<Dtype>::FillUnrolledNet(NetParameter* net_param) const {
       cont_h_d_param->add_bottom("h_d_"+tm1s);
       cont_h_d_param->add_bottom("cont_" + ts);
       cont_h_d_param->add_top("h_d_conted_" + tm1s);
-
        
       LayerParameter* hs_param = net_param->add_layer();
       hs_param->CopyFrom(sum_param);
@@ -247,7 +246,15 @@ void SLSTMLayer<Dtype>::FillUnrolledNet(NetParameter* net_param) const {
       if (this->static_input_) {
         input_sum_layer->add_bottom("W_xc_x_static");
       }
+
       input_sum_layer->add_top("gate_input_" + ts);
+
+      LayerParameter* cont_gate_param = net_param->add_layer();
+      cont_gate_param->CopyFrom(scalar_param);
+      cont_gate_param->set_name("gate_conted_"+ts);
+      cont_gate_param->add_bottom("gate_input_"+ts);
+      cont_gate_param->add_bottom("cont_" + ts);
+      cont_gate_param->add_top("gate_conted_" + ts);
     }
 
     // Add LSTMUnit layer to compute the cell & hidden vectors c_t and h_t.
@@ -267,7 +274,7 @@ void SLSTMLayer<Dtype>::FillUnrolledNet(NetParameter* net_param) const {
       LayerParameter* lstm_unit_param = net_param->add_layer();
       lstm_unit_param->set_type("LSTMUnit");
       lstm_unit_param->add_bottom("c_" + tm1s);
-      lstm_unit_param->add_bottom("gate_input_" + ts);
+      lstm_unit_param->add_bottom("gate_conted_" + ts);
       lstm_unit_param->add_bottom("cont_" + ts);
       lstm_unit_param->add_top("c_" + ts);
       lstm_unit_param->add_top("h_" + ts);

@@ -10,12 +10,20 @@ template <typename Dtype>
 void TileLayer<Dtype>::Reshape(
     const vector<Blob<Dtype>*>& bottom, const vector<Blob<Dtype>*>& top) {
   const TileParameter& tile_param = this->layer_param_.tile_param();
-  axis_ = bottom[0]->CanonicalAxisIndex(tile_param.axis());
+  //axis_ = bottom[0]->CanonicalAxisIndex(tile_param.axis());
+  CHECK_LE(tile_param.axis(),bottom[0]->num_axes());
+  axis_ = tile_param.axis();
   CHECK(tile_param.has_tiles()) << "Number of tiles must be specified";
   tiles_ = tile_param.tiles();
   CHECK_GT(tiles_, 0) << "Number of tiles must be positive.";
   vector<int> top_shape = bottom[0]->shape();
-  top_shape[axis_] = bottom[0]->shape(axis_) * tiles_;
+  if (axis_ < bottom[0]->num_axes()) {
+    top_shape[axis_] = bottom[0]->shape(axis_) * tiles_;
+  } else {
+    // Add a new axis
+    top_shape.push_back(tiles_);
+  }
+  
   top[0]->Reshape(top_shape);
   outer_dim_ = bottom[0]->count(0, axis_);
   inner_dim_ = bottom[0]->count(axis_);

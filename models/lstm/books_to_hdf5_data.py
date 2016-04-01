@@ -77,6 +77,8 @@ class BooksSequenceGenerator(SequenceGenerator):
 	def get_streams(self):
 		line = self.sentences[self.index]
 		stream = self.line_to_stream(line)
+		#if len(stream)==0:
+		#	print 'empty sentence'
 		pad = self.max_words - (len(stream) + 1) if self.pad else 0
 		if pad > 0: self.num_pads += 1
 		self.num_outs += 1
@@ -106,8 +108,8 @@ class BooksSequenceGenerator(SequenceGenerator):
 
 #
 BUFFER_SIZE=100
-OUTPUT_DIR = './models/lstm/h5_data_lm/buffer_%d_vocab_%d' % (BUFFER_SIZE, vocabulary_size)
-SPLITS_PATTERN = '/home/a-linjieyang/work/skip-thoughts/training/sents_%s.txt'
+OUTPUT_DIR = './models/lstm/h5_data_par/buffer_%d_vocab_%d' % (BUFFER_SIZE, vocabulary_size)
+SPLITS_PATTERN = '/home/a-linjieyang/work/skip-thoughts/training/pars_%s.txt'
 #SPLITS_CAP_PATTERN = '/home/a-linjieyang/work/video_caption/dreamstime/%s_list_cap_distill.txt'
 OUTPUT_DIR_PATTERN = '%s/%%s_batches' % OUTPUT_DIR
 VOCAB_PATH = '/home/a-linjieyang/work/skip-thoughts/training/vocabulary'
@@ -116,6 +118,7 @@ def process_dataset(split_name, batch_stream_length, vocab=None):
 	t1 = time.time()
 	with open(SPLITS_PATTERN % split_name, 'r') as split_file:
 		split_sentences = [line.strip() for line in split_file]
+	print '%d sentences read' % len(split_sentences)
 	#if len(split_sentences) != batch_stream_length:
 	#	print 'sentence number not match! %d vs %d' % (len(split_sentences),batch_stream_length)
 	#	exit()
@@ -150,12 +153,12 @@ def process_books():
 		vocab.append(kk)
 	#vocab = vocab_full[:vocabulary_size]
 	#write vocabulary
-	with open(VOCAB_PATH+'.txt','w') as f:
-		for w in vocab:
-			f.write(w+'\n')
-	exit()
-	print vocab[:3]
-	print vocab[-1]
+	#with open(VOCAB_PATH+'.txt','w') as f:
+	#	for w in vocab:
+	#		f.write(w+'\n')
+	#exit()
+	#print vocab[:3]
+	#print vocab[-1]
 	print len(vocab)
 	datasets = [
 	('train', 1000000),# 70304016),

@@ -39,6 +39,7 @@ class Captioner():
     with open(vocab_path, 'r') as vocab_file:
       self.vocab += [word.strip() for word in vocab_file.readlines()]
     assert(self.vocab[1] == '<unk>')
+    self.vocab_inv = dict([(w,i) for i,w in enumerate(self.vocab)])
     net_vocab_size = self.lstm_net.blobs['predict'].data.shape[2]
     if len(self.vocab) != net_vocab_size:
       raise Exception('Invalid vocab file: contains %d words; '
@@ -229,6 +230,63 @@ class Captioner():
       descriptors[batch_start_index:(batch_start_index + current_batch_size)] = \
           self.image_net.blobs[output_name].data[:current_batch_size]
     return descriptors
+  def score_captions_logprob(self, descriptor, captions,
+                     output_name='probs', verbose=True):
+    net = self.lstm_net
+    eps = 1e-20
+    cap_n = len(captions)
+    logprobs = np.zeros((cap_n,1),dtype=np.float32)
+    cont_input = np.zeros_like(net.blobs['cont_sentence'].data)
+    word_input = np.zeros_like(net.blobs['input_sentence'].data)
+    image_features = np.zeros_like(net.blobs['image_features'].data)
+    batch_size = image_features.shape[0]
+    assert descriptor.shape == image_features.shape[1:]
+    for index in range(batch_size):
+      image_features[index] = descriptor
+    outputs = []
+    count = 0
+    input_data_initialized = False
+    for batch_start_index in range(0, len(captions), batch_size):
+      caption_batch = captions[batch_start_index:(batch_start_index + batch_size)]
+      current_batch_size = len(caption_batch)
+      caption_index = 0
+      probs_batch = np.zeros((current_batch_size,1))
+      num_done = 0
+      while num_done < current_batch_size:
+        if caption_index == 0:
+          cont_input[:] = 0
+        elif caption_index == 1:
+          cont_input[:] = 1
+        for index, caption in enumerate(caption_batch):
+          word_input[0, index] = \
+              caption[caption_index - 1] if \
+              0 < caption_index < len(caption) else 0
+        if input_data_initialized:
+          net.forward(start="embedding", input_sentence=word_input,
+                      cont_sentence=cont_input, image_features=image_features)
+        else:
+          net.forward(input_sentence=word_input, cont_sentence=cont_input,
+                      image_features=image_features)
+          input_data_initialized = True
+        output_probs = net.blobs[output_name].data
+        for index, probs, caption in \
+            zip(range(current_batch_size), probs_batch, caption_batch):
+	  if caption_index == len(caption) - 1:
+            num_done += 1
+          if caption_index < len(caption):
+            word = caption[caption_index]
+            probs += np.log(output_probs[0, index, word].reshape(-1)[0]+eps)
+        if verbose:
+          print 'Computed probs for word %d of captions %d-%d (%d done)' % \
+              (caption_index, batch_start_index,
+               batch_start_index + current_batch_size - 1, num_done)
+        caption_index += 1
+      
+      for prob, cap in zip(probs_batch,caption_batch):
+        logprobs[count] = prob  #normalize by caption length
+        count+=1
+   
+    return logprobs
 
   def score_captions(self, descriptor, captions,
                      output_name='probs', caption_source='gt', verbose=True):
@@ -354,6 +412,17 @@ class Captioner():
     else:
       sentence += '...'
     return sentence
+  
+  def tokenize(self, sentence):
+    tokens = sentence.split()
+    sent_token = []
+    for token in tokens:
+      if token in self.vocab_inv:
+        sent_token.append(self.vocab_inv[token])
+      else:
+        sent_token.append(1) #unknown tag
+    return sent_token
+
 
 def softmax(softmax_inputs, temp):
   shifted_inputs = softmax_inputs - softmax_inputs.max()
@@ -390,6 +459,7 @@ def random_choice_from_probs(softmax_inputs, temp=1, already_softmaxed=False):
     cum_sum += p
     if cum_sum >= r: return i
   return 0  # return eos?
+
 
 def gen_stats(prob, normalizer=None):
   stats = {}

@@ -8,7 +8,7 @@ import numpy as np
 import os
 import random
 import sys
-
+random.seed(1234)
 sys.path.append('./python/')
 import caffe
 REMOVE_UNK = True
@@ -54,7 +54,14 @@ class Composer():
     #self.lstm_net.blobs['image_features'].reshape(batch_size,
      #   *self.lstm_net.blobs['image_features'].data.shape[1:])
     self.lstm_net.reshape()
-
+  def score_paragraph(self, paragraph, output_name='probs'):
+	output = {}
+	output['prob'] = []
+	probs = self.predict_single_word(0)
+	for word in paragraph:
+		output['prob'].append(probs[word])
+		probs = self.predict_single_word(word)
+	return output
 
   def predict_single_word(self, previous_word, output='probs'):
     net = self.lstm_net
@@ -71,9 +78,9 @@ class Composer():
 
 
     return output_preds
-  def predict_single_word_from_all_previous(self, previous_words):
+  def predict_single_word_from_all_previous(self, previous_words, output='probs'):
     for word in [0] + previous_words:
-      probs = self.predict_single_word(word)
+      probs = self.predict_single_word(word,output)
     return probs
 
   # Strategy must be either 'beam' or 'sample'.
@@ -99,19 +106,24 @@ class Composer():
     probs = []
     eps_prob = 1e-8
     temp = strategy['temp'] if 'temp' in strategy else 1.0
+    do_par = strategy['par'] if 'par' in strategy else False
     #if max_length < 0: max_length = float('inf')
-    start=True
-    while len(sentence) < max_length:
+    #start=True
+    par_end=False
+    while len(sentence) < max_length and not (do_par and par_end):
       
-      if start:
-        softmax_inputs = self.predict_single_word_from_all_previous(seed_sent)
-        start=False
+      if not sentence:
+        softmax_inputs = self.predict_single_word_from_all_previous(seed_sent,output=net_output)
+        #word = random_choice_from_probs(probs, temp)	
       else:
         previous_word = sentence[-1] if sentence else 0
+	#print self.vocab[previous_word]
         softmax_inputs = self.predict_single_word(previous_word,
                                                 output=net_output)
       word = random_choice_from_probs(softmax_inputs, temp)
       sentence.append(word)
+      if len(sentence)>=2 and sentence[-2] == 0 and word == 0:
+        par_end = True
       probs.append(softmax(softmax_inputs, 1.0)[word])
     return sentence, probs
 
@@ -186,7 +198,11 @@ class Composer():
     else:
       sentence += '...'
     return sentence
+  def paragraph(self, vocab_indices):
+    sentence = ' '.join([self.vocab[i] for i in vocab_indices])
+    return sentence
   
+ 
   def tokenize(self, sentence):
     tokens = sentence.split()
     sent_token = []
