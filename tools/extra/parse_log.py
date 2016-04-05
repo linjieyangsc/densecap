@@ -29,7 +29,7 @@ def parse_log(path_to_log):
     regex_train_output = re.compile('Train net output #(\d+): (\S+) = ([\.\deE+-]+)')
     regex_test_output = re.compile('Test net output #(\d+): (\S+) = ([\.\deE+-]+)')
     regex_learning_rate = re.compile('lr = ([-+]?[0-9]*\.?[0-9]+([eE]?[-+]?[0-9]+)?)')
-
+    regex_time_stamp = re.compile('I(\d){4}')
     # Pick out lines of interest
     iteration = -1
     learning_rate = float('NaN')
@@ -50,7 +50,9 @@ def parse_log(path_to_log):
                 # Only start parsing for other stuff if we've found the first
                 # iteration
                 continue
-
+	    # skip line not starting with time stamps
+            if not regex_time_stamp.match(line):
+	    	continue
             time = extract_seconds.extract_datetime_from_line(line,
                                                               logfile_year)
             seconds = (time - start_time).total_seconds()

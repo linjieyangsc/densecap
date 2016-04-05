@@ -307,9 +307,11 @@ def process_dataset(split_name, coco_split_name, batch_stream_length,
 	print 'Padded %d/%d sequences; truncated %d/%d sequences' % \
 			(num_pads, num_outs, num_truncates, num_outs)
 	return sg.vocabulary_inverted
-#VOCAB_DIR = 'examples/visual_genome/h5_data/buffer_100/vocabulary.txt'
+VOCAB_DIR = 'examples/visual_genome/h5_data/buffer_100/vocabulary.txt'
 def process_vg(include_trainval=False):
 	vocab = None
+	with open(VOCAB_DIR) as f:
+		vocab = [line.strip() for line in f]
 	
 	datasets = [
 			('train', 'train', 100000, True),
