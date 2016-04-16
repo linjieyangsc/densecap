@@ -589,6 +589,15 @@ layer {
     num_output: 128
     pad: 0
     kernel_size: 1
+    weight_filler {
+      type: "uniform"
+      min: -0.08
+      max: 0.08
+    }
+    bias_filler {
+      type: "constant"
+      value: 0.1
+    }
   }
 }
 

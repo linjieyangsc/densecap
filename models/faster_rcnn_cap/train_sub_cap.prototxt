@@ -724,6 +724,7 @@ layer {
   bottom: "predict_loc"
   bottom: "bbox_tile_reshape"
   bottom: "cont_tile"
+  bottom: "cont_tile"
   top: "smooth_l1_loss"
   loss_weight: 1
 }

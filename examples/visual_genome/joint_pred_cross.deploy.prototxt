@@ -1,0 +1,238 @@
+name: "caffenet_to_lstm"
+
+input: "cont_sentence"
+input_shape { dim: 1 dim: 1000 }
+
+input: "input_sentence"
+input_shape { dim: 1 dim: 1000 }
+
+input: "image_features"
+input_shape { dim: 1000 dim: 6272 }
+
+
+
+
+
+layer {
+  name: "embedding"
+  type: "Embed"
+  bottom: "input_sentence"
+  top: "embedded_input_sentence"
+  param {
+    lr_mult: 1
+  }
+  embed_param {
+    bias_term: false
+    input_dim: 10001
+    num_output: 1000
+    weight_filler {
+      type: "uniform"
+      min: -0.08
+      max: 0.08
+    }
+  }
+}
+
+
+layer {
+  name: "lstm1"
+  type: "LSTM"
+  bottom: "embedded_input_sentence"
+  bottom: "cont_sentence"
+  top: "lstm1"
+  recurrent_param {
+    num_output: 1000
+    weight_filler {
+      type: "uniform"
+      min: -0.08
+      max: 0.08
+    }
+    bias_filler {
+      type: "constant"
+      value: 0
+    }
+  }
+}
+layer {
+  name: "lstm3"
+  type: "LSTM"
+  bottom: "lstm1"
+  bottom: "cont_sentence"
+  bottom: "image_features"
+  top: "lstm3"
+  recurrent_param {
+    num_output: 1000
+    weight_filler {
+      type: "uniform"
+      min: -0.08
+      max: 0.08
+    }
+    bias_filler {
+      type: "constant"
+      value: 0
+    }
+  }
+}
+layer {
+  name: "predict_mask"
+  type: "InnerProduct"
+  bottom: "lstm3"
+  top: "predict_mask"
+  param {
+    lr_mult: 1
+    decay_mult: 1
+  }
+  param {
+    lr_mult: 2
+    decay_mult: 0
+  }
+  inner_product_param {
+    num_output: 49 # for 7x7 conv5 feature
+    weight_filler {
+      type: "uniform"
+      min: -0.08
+      max: 0.08
+    }
+    bias_filler {
+      type: "constant"
+      value: 0
+    }
+    axis: 2
+  }
+} 
+
+layer {
+  name: "mask_tile"
+  type: "Tile"
+  bottom: "predict_mask"
+  top: "mask_tile"
+  tile_param {
+    axis: 2
+    tiles: 128
+  }
+}
+
+layer {
+  name: "mask_re"
+  type: "Reshape"
+  bottom: "mask_tile"
+  top: "mask_re"
+  reshape_param {
+    shape {
+      dim: 0
+      dim: 0
+      dim: -1
+    }
+  }
+}
+
+layer {
+  name: "features_re"
+  type: "Reshape"
+  bottom: "image_features"
+  top: "features_re"
+  reshape_param {
+    shape {
+      dim: 1
+      dim: -1
+      dim: 6272
+    }
+  }
+}
+
+layer {
+  name: "conv6m"
+  type: "Eltwise"
+  bottom: "mask_re"
+  bottom: "features_re"
+  top: "conv6m"
+  eltwise_param {
+    operation: PROD
+  }
+}
+layer {
+  name: "concat"
+  type: "Concat"
+  bottom: "lstm1"
+  bottom: "conv6m"
+  top: "lstm1_conv6m"
+  concat_param {
+    axis: 2
+  }
+}
+
+layer {
+  name: "lstm2"
+  type: "LSTM"
+  bottom: "lstm1_conv6m"
+  bottom: "cont_sentence"
+  top: "lstm2"
+  recurrent_param {
+    num_output: 1000
+    weight_filler {
+      type: "uniform"
+      min: -0.08
+      max: 0.08
+    }
+    bias_filler {
+      type: "constant"
+      value: 0
+    }
+  }
+}
+
+
+layer {
+  name: "predict_loc"
+  type: "InnerProduct"
+  bottom: "predict_mask"
+  top: "predict_loc"
+  param {
+    lr_mult: 1
+    decay_mult: 1
+  }
+  param {
+    lr_mult: 2
+    decay_mult: 0
+  }
+  inner_product_param {
+    num_output: 4
+    weight_filler {
+      type: "uniform"
+      min: -0.08
+      max: 0.08
+    }
+    bias_filler {
+      type: "constant"
+      value: 0
+    }
+    axis: 2
+  }
+} 
+
+layer {
+  name: "predict"
+  type: "InnerProduct"
+  bottom: "lstm2"
+  top: "predict"
+  param {
+    lr_mult: 1
+    decay_mult: 1
+  }
+  param {
+    lr_mult: 2
+    decay_mult: 0
+  }
+  inner_product_param {
+    num_output: 10001
+    axis: 2
+  }
+}
+
+layer {
+  name: "probs"
+  type: "Softmax"
+  bottom: "predict"
+  top: "probs"
+  softmax_param { axis: 2 }
+}

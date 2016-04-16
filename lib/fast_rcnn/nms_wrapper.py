@@ -14,6 +14,7 @@ def nms(dets, thresh, force_cpu=False):
 
     if dets.shape[0] == 0:
         return []
+#    print "gpu_id used by nms is: %d" % cfg.GPU_ID
     if cfg.USE_GPU_NMS and not force_cpu:
         return gpu_nms(dets, thresh, device_id=cfg.GPU_ID)
     else:

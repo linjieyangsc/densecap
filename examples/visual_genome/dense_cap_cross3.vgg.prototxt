@@ -577,7 +577,6 @@ layer {
     stride: 2
   }
 }
-
 layer {
   name: "conv6"
   type: "Convolution"
@@ -616,27 +615,34 @@ layer {
     dropout_ratio: 0.5
   }
 }
+                
+layer {
+  name: "conv6tile"
+  type: "Tile"
+  bottom: "conv6"
+  top: "conv6tile"
+  tile_param {
+    axis: 0
+    tiles: 11
+  }
+}
 
 layer {
-  name: "fc10"
-  type: "InnerProduct"
-  bottom: "conv6"
-  top: "fc10"
-  param { lr_mult: 1 }
-  param { lr_mult: 2 decay_mult: 0}
-  inner_product_param {
-    num_output: 4096
-    weight_filler {
-      type: "uniform"
-      min: -0.08
-      max: 0.08
-    }
-    bias_filler {
-      type: "constant"
-      value: 0
+  name: "conv6re"
+  type: "Reshape"
+  bottom: "conv6tile"
+  top: "conv6re"
+  reshape_param {
+    shape {
+      dim: 11
+      dim: 100
+      dim: -1
     }
   }
 }
+
+
+
 
 layer {
   name: "embedding"
@@ -679,26 +685,6 @@ layer {
   }
 }
 layer {
-  name: "lstm2"
-  type: "LSTM"
-  bottom: "lstm1"
-  bottom: "cont_sentence"
-  bottom: "fc10"
-  top: "lstm2"
-  recurrent_param {
-    num_output: 1000
-    weight_filler {
-      type: "uniform"
-      min: -0.08
-      max: 0.08
-    }
-    bias_filler {
-      type: "constant"
-      value: 0
-    }
-  }
-}
-layer {
   name: "lstm3"
   type: "LSTM"
   bottom: "lstm1"
@@ -719,9 +705,112 @@ layer {
   }
 }
 layer {
-  name: "predict_loc"
+  name: "predict_mask"
   type: "InnerProduct"
   bottom: "lstm3"
+  top: "predict_mask"
+  param {
+    lr_mult: 1
+    decay_mult: 1
+  }
+  param {
+    lr_mult: 2
+    decay_mult: 0
+  }
+  inner_product_param {
+    num_output: 49 # for 7x7 conv5 feature
+    weight_filler {
+      type: "uniform"
+      min: -0.08
+      max: 0.08
+    }
+    bias_filler {
+      type: "constant"
+      value: 0
+    }
+    axis: 2
+  }
+} 
+layer {
+  name: "mask_norm"
+  type: "Softmax"
+  bottom: "predict_mask"
+  top: "mask_norm"
+  softmax_param {
+    axis: 2
+  }
+}
+layer {
+  name: "mask_tile"
+  type: "Tile"
+  bottom: "mask_norm"
+  top: "mask_tile"
+  tile_param {
+    axis: 2
+    tiles: 128
+  }
+}
+
+layer {
+  name: "mask_re"
+  type: "Reshape"
+  bottom: "mask_tile"
+  top: "mask_re"
+  reshape_param {
+    shape {
+      dim: 0
+      dim: 0
+      dim: -1
+    }
+  }
+}
+
+layer {
+  name: "conv6m"
+  type: "Eltwise"
+  bottom: "mask_re"
+  bottom: "conv6re"
+  top: "conv6m"
+  eltwise_param {
+    operation: PROD
+  }
+}
+layer {
+  name: "concat"
+  type: "Concat"
+  bottom: "lstm1"
+  bottom: "conv6m"
+  top: "lstm1_conv6m"
+  concat_param {
+    axis: 2
+  }
+}
+
+layer {
+  name: "lstm2"
+  type: "LSTM"
+  bottom: "lstm1_conv6m"
+  bottom: "cont_sentence"
+  top: "lstm2"
+  recurrent_param {
+    num_output: 1000
+    weight_filler {
+      type: "uniform"
+      min: -0.08
+      max: 0.08
+    }
+    bias_filler {
+      type: "constant"
+      value: 0
+    }
+  }
+}
+
+
+layer {
+  name: "predict_loc"
+  type: "InnerProduct"
+  bottom: "predict_mask"
   top: "predict_loc"
   param {
     lr_mult: 1
