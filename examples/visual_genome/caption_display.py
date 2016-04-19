@@ -2,8 +2,8 @@ import os
 import json
 import cv2
 import numpy as np
-res_path = './retrieval_cache/vg_test/10_ims/dense_cap2_iter_300000/beam30/generation_result.json'
-sav_dir = 'examples/visual_genome/caption_locations'
+res_path = './retrieval_cache/vg_test/10_ims/dense_cap_cross3_iter_150000/sample1.0/generation_result.json'
+sav_dir = 'examples/visual_genome/caption_locations1'
 result = json.load(open(res_path))
 for im_res in result:
   image_path = im_res['image_path']

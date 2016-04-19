@@ -4,6 +4,7 @@ from collections import OrderedDict
 import h5py
 import math
 import matplotlib.pyplot as plt
+#import cv2
 import numpy as np
 import os
 import random
@@ -124,8 +125,41 @@ class RegionCaptioner():
     if strategy['type'] == 'beam':
       return self.predict_caption_beam_search(descriptor, strategy)
     else:
-      not_implemented()
- 
+      self.set_caption_batch_size(1)
+      num_samples = strategy['num'] if 'num' in strategy else 1
+      samples = []
+      sample_probs = []
+      sample_locations = []
+      for _ in range(num_samples):
+        sample, sample_prob, sample_location = self.sample_caption(descriptor, strategy)
+        samples.append(sample)
+        sample_probs.append(sample_prob)
+        #need to turn sample_location into numpy array
+        sample_locations.append(sample_location)
+      return samples, sample_probs, sample_locations
+      #not_implemented()
+  def sample_caption(self, descriptor, strategy,
+                     net_output=['predict','predict_loc'], max_length=10):
+    sentence = []
+    probs = []
+    locations = []
+    eps_prob = 1e-8
+    temp = strategy['temp'] if 'temp' in strategy else 1.0
+    if max_length < 0: max_length = float('inf')
+    while len(sentence) < max_length and (not sentence or sentence[-1] != 0):
+      previous_word = sentence[-1] if sentence else 0
+      predict_outputs = self.predict_single_word(descriptor, previous_word,
+                                                output=net_output)
+      softmax_inputs = predict_outputs[net_output[0]]
+      predict_location = predict_outputs[net_output[1]]
+      word = random_choice_from_probs(softmax_inputs, temp)
+      locations.append(predict_location)
+      sentence.append(word)
+
+      probs.append(softmax(softmax_inputs, 1.0)[word])
+
+    locations=np.array(locations) 
+    return sentence, probs, locations
   def predict_caption_beam_search(self, descriptor, strategy, max_length=10):
     orig_batch_size = self.caption_batch_size()
     if orig_batch_size != 1: self.set_caption_batch_size(1)

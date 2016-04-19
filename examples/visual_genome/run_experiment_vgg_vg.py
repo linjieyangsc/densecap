@@ -113,35 +113,28 @@ class CaptionExperiment():
           #for caption, probs in zip(captions, caption_probs):
           print 'mean of descriptor is %f' % np.mean(self.descriptors[batch_image_index])
 
-          print 'locations of first and last caption'
-          print locations[0]
-          print locations[-1]
 
 	  #exit()
           
           locations = [get_bbox_coord(location_seq) for location_seq in locations]
-          log_probs = [gen_stats(probs)['log_p'] for probs in caption_probs]  
+          log_probs = [gen_stats(probs)['log_p_word'] for probs in caption_probs]  
           #print log_probs
-          #print captions
+          print 'locations of first and last caption'
+          print locations[0]
+          print locations[-1]
           result = []
           for cap, log_prob, location in zip(captions, log_probs, locations):
             result.append({'caption':cap,'log_prob':log_prob,'location':location})        
 
           result_nms = nms(result)
           nms_captions = [x['caption'] for x in result_nms]
+          print 'there are %d captions after nms' % len(result_nms)
           print nms_captions
           all_results[batch_image_index] = result_nms
     sys.stdout.write('\n')
     t2 = time.time()
     print "%f seconds elapsed" % (t2-t1)
-    # Compute the number of reference files as the maximum number of ground
-    # truth captions of any image in the dataset.
-    num_reference_files = 0
-    for captions in self.dataset.values():
-      if len(captions) > num_reference_files:
-        num_reference_files = len(captions)
-    if num_reference_files <= 0:
-      raise Exception('No reference captions.')
+    
     image_ids = range(len(self.images))#dummy index
     # Collect model/reference captions, formatting the model's captions and
     # each set of reference captions as a list of len(self.images) strings.
@@ -166,6 +159,7 @@ class CaptionExperiment():
         new_ref_caption_locations.append(anno) 
       #merge regions with large overlapped areas
       reference_caption_locations[image_index] = gt_region_merge(new_ref_caption_locations)
+      print '%d regions after merging' % len(reference_caption_locations[image_index])
    
     generation_result = [{
       'image_id': image_ids[image_index],
@@ -213,7 +207,8 @@ def nms(region_info, bbox_th=0.3):
   #area, intersection area, union area
   bbox_areas = (bboxes_coord2[:,2] - bboxes_coord2[:,0]) * \
     (bboxes_coord2[:, 3] - bboxes_coord2[:, 1])
-
+  print 'bbox areas'
+  print bbox_areas
   x_a1 = bboxes_coord2[:,0].reshape(region_n,1)
   x_a2 = bboxes_coord2[:,2].reshape(region_n,1)
   x_b1 = bboxes_coord2[:,0].reshape(1,region_n)
@@ -222,18 +217,26 @@ def nms(region_info, bbox_th=0.3):
   y_a2 = bboxes_coord2[:,3].reshape(region_n,1)
   y_b1 = bboxes_coord2[:,1].reshape(1,region_n)
   y_b2 = bboxes_coord2[:,3].reshape(1,region_n)
-  bbox_pair_x_diff = np.maximum(0, np.maximum(x_a2, x_b2) - np.minimum(x_a1, x_b1))
-  bbox_pair_y_diff = np.maximum(0, np.maximum(y_a2, y_b2) - np.minimum(y_a1, y_b1))
+  bbox_pair_x_diff = np.maximum(0, np.minimum(x_a2, x_b2) - np.maximum(x_a1, x_b1))
+  bbox_pair_y_diff = np.maximum(0, np.minimum(y_a2, y_b2) - np.maximum(y_a1, y_b1))
   inter_areas = bbox_pair_x_diff * bbox_pair_y_diff
+  print 'inter areas'
+  print inter_areas
   #IoU
   union_areas = bbox_areas.reshape(region_n,1) + bbox_areas.reshape(1,region_n)
+  print 'union_areas'
+  print union_areas
   bbox_iou = inter_areas / (union_areas - inter_areas)
-  bbox_iou_th = bbox_iou > bbox_th
+  print 'bbox iou'
+  print bbox_iou
+  bbox_iou_th = bbox_iou < bbox_th
   keep_flag = np.ones((region_n),dtype=np.uint8)
 
   for i in xrange(region_n-1):
     if keep_flag[i]:
       keep_flag[i+1:] = np.logical_and(keep_flag[i+1:], bbox_iou_th[i,i+1:])  
+  print 'sum of keep flag'
+  print keep_flag.sum()
   return [region_info[i] for i in xrange(region_n) if keep_flag[i]]	
 
 def gt_region_merge(region_info, bbox_th=0.7):
@@ -259,11 +262,13 @@ def gt_region_merge(region_info, bbox_th=0.7):
   y_a2 = bboxes_coord2[:,3].reshape(region_n,1)
   y_b1 = bboxes_coord2[:,1].reshape(1,region_n)
   y_b2 = bboxes_coord2[:,3].reshape(1,region_n)
-  bbox_pair_x_diff = np.maximum(0, np.maximum(x_a2, x_b2) - np.minimum(x_a1, x_b1))
-  bbox_pair_y_diff = np.maximum(0, np.maximum(y_a2, y_b2) - np.minimum(y_a1, y_b1))
+  bbox_pair_x_diff = np.maximum(0, np.minimum(x_a2, x_b2) - np.maximum(x_a1, x_b1))
+  bbox_pair_y_diff = np.maximum(0, np.minimum(y_a2, y_b2) - np.maximum(y_a1, y_b1))
   inter_areas = bbox_pair_x_diff * bbox_pair_y_diff
+  
   #IoU
   union_areas = bbox_areas.reshape(region_n,1) + bbox_areas.reshape(1,region_n)
+  
   bbox_iou = inter_areas / (union_areas - inter_areas)
   bbox_iou_th = bbox_iou > bbox_th
   bbox_iou_overlap_n = bbox_iou_th.sum(axis = 0)
@@ -313,15 +318,15 @@ def main():
     TAG += '_%dimages' % MAX_IMAGES
   eval_on_test = False
   
-  ITER = 17123
-  MODEL_FILENAME = 'dense_cap_cross_iter_%d' % ITER
+  ITER = 150000
+  MODEL_FILENAME = 'dense_cap_cross3_iter_%d' % ITER
   DATASET_NAME = 'vg_test'
 
   TAG += '_%s' % DATASET_NAME
   MODEL_DIR = './examples/visual_genome'
   MODEL_FILE = '%s/%s.caffemodel' % (MODEL_DIR, MODEL_FILENAME)
   IMAGE_NET_FILE = './examples/visual_genome/vgg_deploy.prototxt'
-  LSTM_NET_FILE = './examples/visual_genome/joint_pred_cross.deploy.prototxt'#joint_pred_cross.deploy.prototxt for cross version
+  LSTM_NET_FILE = './examples/visual_genome/joint_pred_cross3.deploy.prototxt'#joint_pred_cross.deploy.prototxt for cross version
   NET_TAG = '%s_%s' % (TAG, MODEL_FILENAME)
   DATASET_SUBDIR = '%s/%s_ims' % (DATASET_NAME,
       str(MAX_IMAGES) if MAX_IMAGES >= 0 else 'all')
@@ -336,8 +341,14 @@ def main():
   #eval_caption_file = '/home/a-linjieyang/work/video_caption/dreamstime/val_list_cap.txt'
   with open(eval_image_file, 'r') as split_file:
     split_image_ids = [int(line.strip()) for line in split_file]
+  #split_image_ids = [2342728]
+  vg_sample_region_path = '/media/researchshare/linjie/data/visual-genome/sample_region_descriptions.json'
+  vg_sample_meta_path = '/media/researchshare/linjie/data/visual-genome/sample_image_data.json'
+  #regions_all = json.load(open(vg_sample_region_path))
+  #image_data = json.load(open(vg_sample_meta_path))
   regions_all = json.load(open(VG_REGION_PATH))
   image_data = json.load(open(VG_METADATA_PATH))
+  #print image_data
   print 'region data loaded.'
   #with open(eval_caption_file, 'r') as split_cap_file:
   #  split_sentences = [line.strip() for line in split_cap_file]
@@ -363,11 +374,12 @@ def main():
                         device_id=DEVICE_ID)
   beam_size = 30
 
-  generation_strategy = {'type': 'beam', 'beam_size': beam_size}
+  #generation_strategy = {'type': 'beam', 'beam_size': beam_size}
+  generation_strategy = {'type':'sample', 'num':1000, 'temp': 1}
   if generation_strategy['type'] == 'beam':
     strategy_name = 'beam%d' % generation_strategy['beam_size']
   elif generation_strategy['type'] == 'sample':
-    strategy_name = 'sample%f' % generation_strategy['temp']
+    strategy_name = 'sample%0.1f' % generation_strategy['temp']
   else:
     raise Exception('Unknown generation strategy type: %s' % generation_strategy['type'])
   CACHE_DIR = '%s/%s' % (DATASET_CACHE_DIR, strategy_name)
