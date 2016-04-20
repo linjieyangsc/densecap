@@ -3,7 +3,7 @@ import json
 import cv2
 import numpy as np
 res_path = './retrieval_cache/vg_test/10_ims/dense_cap_cross3_iter_150000/sample1.0/generation_result.json'
-sav_dir = 'examples/visual_genome/caption_locations1'
+sav_dir = 'models/dense_cap/caption_locations1'
 result = json.load(open(res_path))
 for im_res in result:
   image_path = im_res['image_path']

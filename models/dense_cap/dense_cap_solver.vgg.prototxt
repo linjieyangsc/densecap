@@ -1,4 +1,4 @@
-net: "./examples/visual_genome/dense_cap_cross.vgg.prototxt"
+net: "./models/dense_cap/dense_cap.vgg.prototxt"
 
 
 train_state: { stage: 'freeze-convnet' }
@@ -16,7 +16,7 @@ max_iter: 300000
 momentum: 0.9
 weight_decay: 0.0000
 snapshot: 50000
-snapshot_prefix: "./examples/visual_genome/dense_cap_cross"
+snapshot_prefix: "./models/dense_cap/dense_cap"
 solver_mode: GPU
 random_seed: 1701
 average_loss: 100

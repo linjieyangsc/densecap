@@ -20,24 +20,21 @@ MAX_HASH = 100000
 vocabulary_size = 10000#10497#from dense caption paper
 #sys.path.append(COCO_TOOL_PATH)
 #from pycocotools.coco import COCO
+# words to be stripped from the begining of the caption
 strip_words = ['there is ','there are ', 'this seems to be ', 'it seems to be ', 
 'it is ','that is ','this is ']
+# punctuations to be removed
 punct_list = ['.','?','!']
-REMOVE_PUNCT=False
+# Remove punctuations or not
+REMOVE_PUNCT=True
+# preload vocabulary or not
+PRELOAD_VOCAB=False
+BASE_DIR = 'models/dense_cap'
+VOCAB_PATH = '%s/h5_data_distill/buffer_100/vocabulary.txt' % BASE_DIR
 from hdf5_sequence_generator2 import SequenceGenerator, HDF5SequenceWriter
 
 # UNK_IDENTIFIER is the word used to identify unknown words
 UNK_IDENTIFIER = '<unk>'
-
-SENTENCE_SPLIT_REGEX = re.compile(r'(\W+)')
-def split_sentence(sentence):
-	# break sentence into a list of words and punctuation
-	sentence = [s.lower() for s in SENTENCE_SPLIT_REGEX.split(sentence.strip()) if len(s.strip()) > 0]
-	# remove the '.' from the end of the sentence
-	if sentence[-1] != '.':
-		# print "Warning: sentence doesn't end with '.'; ends with: %s" % sentence[-1]
-		return sentence
-	return sentence[:-1]
 
 MAX_WORDS = 11
 
@@ -249,11 +246,11 @@ class VGSequenceGenerator(SequenceGenerator):
 #COCO_ANNO_PATH = '%s/annotations/captions_%%s2014.json' % COCO_PATH
 VG_IMAGE_PATTERN = '%s/%%d.jpg' % VG_IMAGE_ROOT
 
-BUFFER_SIZE = 50
+BUFFER_SIZE =100
 if REMOVE_PUNCT:
-	OUTPUT_DIR = './examples/visual_genome/h5_data_distill/buffer_%d' % BUFFER_SIZE
+	OUTPUT_DIR = '%s/h5_data_distill/buffer_%d' % (BASE_DIR, BUFFER_SIZE)
 else:
-	OUTPUT_DIR = './examples/visual_genome/h5_data/buffer_%d' % BUFFER_SIZE
+	OUTPUT_DIR = '%s/h5_data/buffer_%d' % (BASE_DIR, BUFFER_SIZE)
 
 SPLITS_PATTERN = '/media/researchshare/linjie/data/visual-genome/densecap_splits/%s.txt'
 OUTPUT_DIR_PATTERN = '%s/%%s_batches' % OUTPUT_DIR
@@ -307,12 +304,13 @@ def process_dataset(split_name, coco_split_name, batch_stream_length,
 	print 'Padded %d/%d sequences; truncated %d/%d sequences' % \
 			(num_pads, num_outs, num_truncates, num_outs)
 	return sg.vocabulary_inverted
-VOCAB_DIR = 'examples/visual_genome/h5_data/buffer_100/vocabulary.txt'
+
 def process_vg(include_trainval=False):
 	vocab = None
-	with open(VOCAB_DIR) as f:
-		vocab = [line.strip() for line in f]
-	
+	if PRELOAD_VOCAB:
+		with open(VOCAB_PATH) as f:
+			vocab = [line.strip() for line in f]
+
 	datasets = [
 			('train', 'train', 100000, True),
 			('val', 'val', 100000, True),

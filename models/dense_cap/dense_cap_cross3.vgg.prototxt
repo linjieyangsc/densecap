@@ -15,7 +15,7 @@ layer {
     mean_value: 123
   }
   image_data_param {
-    source: "./examples/visual_genome/h5_data_distill/buffer_100/train_aligned_11_batches/image_list.with_dummy_labels.txt"
+    source: "./models/dense_cap/h5_data_distill/buffer_100/train_aligned_11_batches/image_list.with_dummy_labels.txt"
     batch_size: 100
     new_height: 224
     new_width: 224
@@ -30,7 +30,7 @@ layer {
   top: "target_coord"
   include { phase: TRAIN }
   hdf5_data_param {
-    source: "./examples/visual_genome/h5_data_distill/buffer_100/train_aligned_11_batches/hdf5_chunk_list.txt"
+    source: "./models/dense_cap/h5_data_distill/buffer_100/train_aligned_11_batches/hdf5_chunk_list.txt"
     batch_size: 11
   }
 }
@@ -53,7 +53,7 @@ layer {
     mean_value: 123
   }
   image_data_param {
-    source: "./examples/visual_genome/h5_data_distill/buffer_100/val_aligned_11_batches/image_list.with_dummy_labels.txt"
+    source: "./models/dense_cap/h5_data_distill/buffer_100/val_aligned_11_batches/image_list.with_dummy_labels.txt"
     batch_size: 100
     new_height: 224
     new_width: 224
@@ -70,7 +70,7 @@ layer {
     phase: TEST
   }
   hdf5_data_param {
-    source: "./examples/visual_genome/h5_data_distill/buffer_100/val_aligned_11_batches/hdf5_chunk_list.txt"
+    source: "./models/dense_cap/h5_data_distill/buffer_100/val_aligned_11_batches/hdf5_chunk_list.txt"
     batch_size: 11
   }
 }

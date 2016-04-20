@@ -584,7 +584,7 @@ layer {
   python_param {
     module: 'rpn.sentence_data_layer'
     layer: 'SentenceDataLayer'
-    param_str: "{'time_steps': 11, 'phrase_path': '/home/a-linjieyang/work/caffe/caffe_s2vt/examples/visual_genome/h5_data_distill/buffer_100/train_gt_phrases.pkl'}" 
+    param_str: "{'time_steps': 11, 'phrase_path': '/home/a-linjieyang/work/caffe/caffe_s2vt/models/dense_cap/h5_data_distill/buffer_100/train_gt_phrases.pkl'}" 
   }
 }
 layer {

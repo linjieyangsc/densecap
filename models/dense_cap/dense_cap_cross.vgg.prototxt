@@ -1,11 +1,4 @@
-# The network is used for the image captioning experiments of LRCN [1].
-# Please consider citing LRCN [1] if you use this example in your work.
-#
-# [1] J. Donahue, L. A. Hendricks, S. Guadarrama, M. Rohrbach, S. Venugopalan,
-#     K. Saenko, T. Darrell. "Long-term Recurrent Convolutional Networks for
-#     Visual Recognition and Description." arXiv preprint arXiv:1411.4389 (2014).
-
-name: "lrcn_caffenet_to_lstm"
+name: "vgg_to_lstm"
 
 # train data layers
 layer {
@@ -22,10 +15,10 @@ layer {
     mean_value: 123
   }
   image_data_param {
-    source: "/home/a-linjieyang/work/video_caption/dreamstime/train_list_filt.txt"
-    batch_size: 50
-    new_height: 256
-    new_width: 256
+    source: "./models/dense_cap/h5_data_distill/buffer_100/train_aligned_11_batches/image_list.with_dummy_labels.txt"
+    batch_size: 100
+    new_height: 224
+    new_width: 224
   }
 }
 layer {
@@ -34,53 +27,14 @@ layer {
   top: "cont_sentence"
   top: "input_sentence"
   top: "target_sentence"
+  top: "target_coord"
   include { phase: TRAIN }
   hdf5_data_param {
-    source: "./models/lstm/h5_data_distill/buffer_50/train_20_batches/hdf5_chunk_list.txt"
-    batch_size: 20
+    source: "./models/dense_cap/h5_data_distill/buffer_100/train_aligned_11_batches/hdf5_chunk_list.txt"
+    batch_size: 11
   }
 }
 
-# trainval data layers (for finetuning final model)
-# test on train data layers
-layer {
-  name: "data"
-  type: "ImageData"
-  top: "data"
-  top: "label"
-  include {
-    phase: TEST
-    stage: "test-on-train"
-  }
-  transform_param {
-    mirror: true
-    crop_size: 224
-    mean_value: 104
-    mean_value: 117
-    mean_value: 123
-  }
-  image_data_param {
-    source: "/home/a-linjieyang/work/video_caption/dreamstime/train_list_filt.txt"
-    batch_size: 50
-    new_height: 256
-    new_width: 256
-  }
-}
-layer {
-  name: "data"
-  type: "HDF5Data"
-  top: "cont_sentence"
-  top: "input_sentence"
-  top: "target_sentence"
-  include {
-    phase: TEST
-    stage: "test-on-train"
-  }
-  hdf5_data_param {
-    source: "./models/lstm/h5_data_distill/buffer_50/train_20_batches/hdf5_chunk_list.txt"
-    batch_size: 20
-  }
-}
 
 # test on val data layers
 layer {
@@ -90,7 +44,6 @@ layer {
   top: "label"
   include {
     phase: TEST
-    stage: "test-on-val"
   }
   transform_param {
     mirror: true
@@ -100,10 +53,10 @@ layer {
     mean_value: 123
   }
   image_data_param {
-    source: "/home/a-linjieyang/work/video_caption/dreamstime/val_list_filt.txt"
-    batch_size: 50
-    new_height: 256
-    new_width: 256
+    source: "./models/dense_cap/h5_data_distill/buffer_100/val_aligned_11_batches/image_list.with_dummy_labels.txt"
+    batch_size: 100
+    new_height: 224
+    new_width: 224
   }
 }
 layer {
@@ -112,13 +65,13 @@ layer {
   top: "cont_sentence"
   top: "input_sentence"
   top: "target_sentence"
+  top: "target_coord"
   include {
     phase: TEST
-    stage: "test-on-val"
   }
   hdf5_data_param {
-    source: "./models/lstm/h5_data_distill/buffer_50/val_20_batches/hdf5_chunk_list.txt"
-    batch_size: 20
+    source: "./models/dense_cap/h5_data_distill/buffer_100/val_aligned_11_batches/hdf5_chunk_list.txt"
+    batch_size: 11
   }
 }
 
@@ -625,100 +578,72 @@ layer {
   }
 }
 layer {
-  name: "fc6"
-  type: "InnerProduct"
+  name: "conv6"
+  type: "Convolution"
   bottom: "pool5"
-  top: "fc6"
-  param { lr_mult: 0 }
-  param { lr_mult: 0 decay_mult: 0 }
-  include { stage: "freeze-convnet" }
-  inner_product_param {
-    num_output: 4096
+  top: "conv6"
+  param { lr_mult: 1 }
+  param { lr_mult: 2 decay_mult: 0}
+  
+  convolution_param {
+    num_output: 128
+    pad: 0
+    kernel_size: 1
+    weight_filler {
+      type: "gaussian"
+      std: 0.01
+    }
+    bias_filler {
+      type: "constant"
+      value: 0.1
+    }
   }
 }
-layer {
-  name: "fc6"
-  type: "InnerProduct"
-  bottom: "pool5"
-  top: "fc6"
-  param { lr_mult: 0.1 }
-  param { lr_mult: 0.2 decay_mult: 0}
-  exclude { stage: "freeze-convnet" }
-  inner_product_param {
-    num_output: 4096
-  }
-}
+
 layer {
   name: "relu6"
   type: "ReLU"
-  bottom: "fc6"
-  top: "fc6"
+  bottom: "conv6"
+  top: "conv6"
 }
 layer {
   name: "drop6"
   type: "Dropout"
-  bottom: "fc6"
-  top: "fc6"
+  bottom: "conv6"
+  top: "conv6"
   dropout_param {
     dropout_ratio: 0.5
   }
 }
+                
 layer {
-  name: "fc7"
-  type: "InnerProduct"
-  bottom: "fc6"
-  top: "fc7"
-  param { lr_mult: 0 }
-  param { lr_mult: 0 decay_mult: 0 }
-  include { stage: "freeze-convnet" }
-  inner_product_param {
-    num_output: 4096
+  name: "conv6tile"
+  type: "Tile"
+  bottom: "conv6"
+  top: "conv6tile"
+  tile_param {
+    axis: 0
+    tiles: 11
   }
 }
+
 layer {
-  name: "fc7"
-  type: "InnerProduct"
-  bottom: "fc6"
-  top: "fc7"
-  param { lr_mult: 0.1 }
-  param { lr_mult: 0.2 decay_mult: 0}
-  exclude { stage: "freeze-convnet" }
-  inner_product_param {
-    num_output: 4096
+  name: "conv6re"
+  type: "Reshape"
+  bottom: "conv6tile"
+  top: "conv6re"
+  reshape_param {
+    shape {
+      dim: 11
+      dim: 100
+      dim: -1
+    }
   }
 }
-layer {
-  name: "relu7"
-  type: "ReLU"
-  bottom: "fc7"
-  top: "fc7"
-}
-layer {
-  name: "drop7"
-  type: "Dropout"
-  bottom: "fc7"
-  top: "fc7"
-  dropout_param {
-    dropout_ratio: 0.5
-  }
-}
-layer {
-  name: "fc8"
-  type: "InnerProduct"
-  bottom: "fc7"
-  top: "fc8"
-  param {
-    lr_mult: 0.1
-    decay_mult: 1
-  }
-  param {
-    lr_mult: 0.2
-    decay_mult: 0
-  }
-  inner_product_param {
-    num_output: 1000
-  }
-}
+
+
+
+
 layer {
   name: "embedding"
   type: "Embed"
@@ -738,57 +663,14 @@ layer {
     }
   }
 }
-layer {
-  name: "lstm1"
-  type: "LSTM"
-  bottom: "embedded_input_sentence"
-  bottom: "cont_sentence"
-  bottom: "fc8"
-  top: "lstm1"
-  include { stage: "unfactored" }
-  recurrent_param {
-    num_output: 1000
-    weight_filler {
-      type: "uniform"
-      min: -0.08
-      max: 0.08
-    }
-    bias_filler {
-      type: "constant"
-      value: 0
-    }
-  }
-}
-layer {
-  name: "lstm2"
-  type: "LSTM"
-  bottom: "lstm1"
-  bottom: "cont_sentence"
-  top: "lstm2"
-  include {
-    stage: "unfactored"
-    stage: "2-layer"
-  }
-  recurrent_param {
-    num_output: 1000
-    weight_filler {
-      type: "uniform"
-      min: -0.08
-      max: 0.08
-    }
-    bias_filler {
-      type: "constant"
-      value: 0
-    }
-  }
-}
+
+
 layer {
   name: "lstm1"
   type: "LSTM"
   bottom: "embedded_input_sentence"
   bottom: "cont_sentence"
   top: "lstm1"
-  include { stage: "factored" }
   recurrent_param {
     num_output: 1000
     weight_filler {
@@ -803,13 +685,12 @@ layer {
   }
 }
 layer {
-  name: "lstm2"
+  name: "lstm3"
   type: "LSTM"
   bottom: "lstm1"
   bottom: "cont_sentence"
-  bottom: "fc8"
-  top: "lstm2"
-  include { stage: "factored" }
+  bottom: "conv6"
+  top: "lstm3"
   recurrent_param {
     num_output: 1000
     weight_filler {
@@ -824,10 +705,10 @@ layer {
   }
 }
 layer {
-  name: "predict"
+  name: "predict_mask"
   type: "InnerProduct"
-  bottom: "lstm1"
-  top: "predict"
+  bottom: "lstm3"
+  top: "predict_mask"
   param {
     lr_mult: 1
     decay_mult: 1
@@ -836,9 +717,8 @@ layer {
     lr_mult: 2
     decay_mult: 0
   }
-  exclude { stage: "2-layer" }
   inner_product_param {
-    num_output: 10001
+    num_output: 49 # for 7x7 conv5 feature
     weight_filler {
       type: "uniform"
       min: -0.08
@@ -850,6 +730,126 @@ layer {
     }
     axis: 2
   }
+} 
+layer {
+  name: "mask_norm"
+  type: "Sigmoid"
+  bottom: "predict_mask"
+  top: "mask_norm" 
+}
+layer {
+  name: "mask_tile"
+  type: "Tile"
+  bottom: "mask_norm"
+  top: "mask_tile"
+  tile_param {
+    axis: 2
+    tiles: 128
+  }
+}
+
+layer {
+  name: "mask_re"
+  type: "Reshape"
+  bottom: "mask_tile"
+  top: "mask_re"
+  reshape_param {
+    shape {
+      dim: 0
+      dim: 0
+      dim: -1
+    }
+  }
+}
+
+layer {
+  name: "conv6m"
+  type: "Eltwise"
+  bottom: "mask_re"
+  bottom: "conv6re"
+  top: "conv6m"
+  eltwise_param {
+    operation: PROD
+  }
+}
+layer {
+  name: "concat"
+  type: "Concat"
+  bottom: "lstm1"
+  bottom: "conv6m"
+  top: "lstm1_conv6m"
+  concat_param {
+    axis: 2
+  }
+}
+
+layer {
+  name: "lstm2"
+  type: "LSTM"
+  bottom: "lstm1_conv6m"
+  bottom: "cont_sentence"
+  top: "lstm2"
+  recurrent_param {
+    num_output: 1000
+    weight_filler {
+      type: "uniform"
+      min: -0.08
+      max: 0.08
+    }
+    bias_filler {
+      type: "constant"
+      value: 0
+    }
+  }
+}
+
+
+layer {
+  name: "predict_loc"
+  type: "InnerProduct"
+  bottom: "predict_mask"
+  top: "predict_loc"
+  param {
+    lr_mult: 1
+    decay_mult: 1
+  }
+  param {
+    lr_mult: 2
+    decay_mult: 0
+  }
+  inner_product_param {
+    num_output: 4
+    weight_filler {
+      type: "uniform"
+      min: -0.08
+      max: 0.08
+    }
+    bias_filler {
+      type: "constant"
+      value: 0
+    }
+    axis: 2
+  }
+} 
+layer {
+  name: "cont_tile"
+  type: "Tile"
+  bottom: "cont_sentence"
+  top: "cont_tile"
+  tile_param {
+    axis: 2
+    tiles: 4
+  }
+}
+
+layer {
+  name: "smooth_l1_loss"
+  type: "SmoothL1Loss"
+  bottom: "predict_loc"
+  bottom: "target_coord"
+  bottom: "cont_tile"
+  top: "smooth_l1_loss"
+  loss_weight: 2
 }
 layer {
   name: "predict"
@@ -864,7 +864,6 @@ layer {
     lr_mult: 2
     decay_mult: 0
   }
-  include { stage: "2-layer" }
   inner_product_param {
     num_output: 10001
     weight_filler {
@@ -885,7 +884,7 @@ layer {
   bottom: "predict"
   bottom: "target_sentence"
   top: "cross_entropy_loss"
-  loss_weight: 20
+  loss_weight: 10
   loss_param {
     ignore_label: -1
   }
@@ -905,3 +904,5 @@ layer {
     ignore_label: -1
   }
 }
+
+

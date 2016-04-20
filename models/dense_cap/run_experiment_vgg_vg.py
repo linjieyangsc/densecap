@@ -317,41 +317,46 @@ def main():
   if MAX_IMAGES >= 0:
     TAG += '_%dimages' % MAX_IMAGES
   eval_on_test = False
-  
+  # Model to be evaluated 
   ITER = 150000
   MODEL_FILENAME = 'dense_cap_cross3_iter_%d' % ITER
   DATASET_NAME = 'vg_test'
 
   TAG += '_%s' % DATASET_NAME
-  MODEL_DIR = './examples/visual_genome'
+  MODEL_DIR = './model/dense_cap'
   MODEL_FILE = '%s/%s.caffemodel' % (MODEL_DIR, MODEL_FILENAME)
-  IMAGE_NET_FILE = './examples/visual_genome/vgg_deploy.prototxt'
-  LSTM_NET_FILE = './examples/visual_genome/joint_pred_cross3.deploy.prototxt'#joint_pred_cross.deploy.prototxt for cross version
+  IMAGE_NET_FILE = '%s/vgg_deploy.prototxt' % MODEL_DIR
+  LSTM_NET_FILE = '%s/joint_pred_cross3.deploy.prototxt' % MODEL_DIR#joint_pred_cross.deploy.prototxt for cross version
   NET_TAG = '%s_%s' % (TAG, MODEL_FILENAME)
   DATASET_SUBDIR = '%s/%s_ims' % (DATASET_NAME,
       str(MAX_IMAGES) if MAX_IMAGES >= 0 else 'all')
   DATASET_CACHE_DIR = './retrieval_cache/%s/%s' % (DATASET_SUBDIR, MODEL_FILENAME)
-  VOCAB_FILE = './examples/visual_genome/h5_data_distill/buffer_100/vocabulary.txt'
+  VOCAB_FILE = '%s/h5_data_distill/buffer_100/vocabulary.txt' % MODEL_DIR
   DEVICE_ID = 4
   with open(VOCAB_FILE, 'r') as vocab_file:
-    vocab = [line.strip() for line in vocab_file.readlines()]
+    vocab = [line.strip() for line in vocab_file]
   #coco = COCO(COCO_ANNO_PATH % DATASET_NAME)
   #image_root = '/media/researchshare/linjie/data/dreamstime/images'#COCO_IMAGE_PATTERN % DATASET_NAME
   eval_image_file = '/media/researchshare/linjie/data/visual-genome/densecap_splits/test.txt'
+  # caption file is optional
   #eval_caption_file = '/home/a-linjieyang/work/video_caption/dreamstime/val_list_cap.txt'
+  #with open(eval_caption_file, 'r') as split_cap_file:
+  #  split_sentences = [line.strip() for line in split_cap_file]
   with open(eval_image_file, 'r') as split_file:
     split_image_ids = [int(line.strip()) for line in split_file]
   #split_image_ids = [2342728]
+  # Using a sample image 
   vg_sample_region_path = '/media/researchshare/linjie/data/visual-genome/sample_region_descriptions.json'
   vg_sample_meta_path = '/media/researchshare/linjie/data/visual-genome/sample_image_data.json'
+ 
   #regions_all = json.load(open(vg_sample_region_path))
   #image_data = json.load(open(vg_sample_meta_path))
+  
+  # Or using the whole testing set
   regions_all = json.load(open(VG_REGION_PATH))
   image_data = json.load(open(VG_METADATA_PATH))
-  #print image_data
+  
   print 'region data loaded.'
-  #with open(eval_caption_file, 'r') as split_cap_file:
-  #  split_sentences = [line.strip() for line in split_cap_file]
   sg = VGSequenceGenerator(BUFFER_SIZE, regions_all, image_data, split_ids=split_image_ids, vocab=vocab, align=True)
   dataset = {}
   for image_path, phrase, coord in sg.image_phrase_pairs:#[impath,phrase_tokens, norm_coord]
@@ -359,7 +364,7 @@ def main():
       dataset[image_path] = []
 
     dataset[image_path].append((sg.line_to_stream(phrase),phrase,coord))
-    #dataset[image_path].append((sg.line_to_stream(sentence), sentence))
+    
   print 'Original dataset contains %d images' % len(dataset.keys())
   if 0 <= MAX_IMAGES < len(dataset.keys()):
     all_keys = dataset.keys()
@@ -373,9 +378,10 @@ def main():
   captioner = RegionCaptioner(MODEL_FILE, IMAGE_NET_FILE, LSTM_NET_FILE, VOCAB_FILE,
                         device_id=DEVICE_ID)
   beam_size = 30
-
+  sampling_n = 1000
+  # Using beam search or sampling, beam search is much slower
   #generation_strategy = {'type': 'beam', 'beam_size': beam_size}
-  generation_strategy = {'type':'sample', 'num':1000, 'temp': 1}
+  generation_strategy = {'type':'sample', 'num':sampling_n, 'temp': 1}
   if generation_strategy['type'] == 'beam':
     strategy_name = 'beam%d' % generation_strategy['beam_size']
   elif generation_strategy['type'] == 'sample':

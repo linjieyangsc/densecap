@@ -19,8 +19,9 @@ import json
 from utils.blob import im_list_to_blob
 import os
 import sys
-sys.path.add('examples/visual_genome/')
-from run_experiment_vgg_vg import gt_region_merge
+sys.path.add('models/dense_cap/')
+from run_experiment_vgg_vg import gt_region_merge, get_bbox_coord
+from vg_to_hdf5_data import *
 #sys.path.add('examples/coco-caption')
 #import
 COCO_EVAL_PATH = '/media/researchshare/linjie/data/MS_COCO/coco-caption/'
@@ -217,9 +218,6 @@ def im_detect(net, im, boxes=None):
     #do the transformation
     pred_boxes_stack = bbox_transform_inv(boxes_stack, box_deltas_stack)
     pred_boxes_stack = clip_boxes(pred_boxes_stack, im.shape)
-    # transform to [0,1] space 
-    #pred_boxes_stack[:,0,2] /= im.shape[1]
-    #pred_boxes_stack[:,1,3] /= im.shape[0]
     #unraveling
     pred_boxes_seq = [None] * proposal_n
     
@@ -328,10 +326,13 @@ def test_net(net, imdb, max_per_image=100, thresh=0.05, vis=False):
         pos_boxes_seq = boxes_seq[keep]
         if vis:
             #TODO(Linjie): display location sequence
-            vis_detections(imdb.image_path_at(i), im, pos_captions, pos_dets, save_path = os.path.join(output_dir,'vis')
+            vis_detections(imdb.image_path_at(i), im, pos_captions, pos_dets, save_path = os.path.join(output_dir,'vis'))
         all_regions[i] = []
-        #follow the format of baseline models in run_experiment_vgg_vg.py
+        #follow the format of baseline models routine
         for cap, box_seq in zip(pos_captions, pos_boxes_seq):
+            #region sizes normalize to [0, 1], follow baseline model routine
+            box_seq[:, [0, 2]] /= im.shape[1]
+            box_seq[:, [1, 3]] /= im.shape[0]
             anno = {'image_id':i, 'caption':sentence(vocab, cap), 'location_seq': box_seq.tolist(), 'location': box_seq[-1,:].tolist()}
             all_regions[i].append(anno)
 
@@ -352,4 +353,16 @@ def test_net(net, imdb, max_per_image=100, thresh=0.05, vis=False):
         json.dump(generation_result, f)
 
     print 'Evaluating detections'
-    imdb.evaluate_detections(all_regions, output_dir)
+    #imdb.evaluate_detections(all_regions, output_dir)
+   
+   
+    
+    gt_regions = imdb.get_gt_regions() # is a list
+    gt_regions_trans = [None] * num_images
+    #transform gt_regions into the baseline model routine
+    for i,regions in enumerate(gt_regions):
+        for reg in regions:
+            anno = {'image_id':i, 'caption': reg['phrase'], 'location': reg['location']}
+        gt_regions[i]
+    #merge regions with large overlapped areas
+    gt_regions[image_index] = gt_region_merge(new_gt_regions)
