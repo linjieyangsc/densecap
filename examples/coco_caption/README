@@ -1,0 +1,12 @@
+====================================
+Linjie Yang
+04/21/2016
+====================================
+This folder is originally from Vsubhashini's Caffe branch (https://github.com/vsubhashini/caffe/tree/recurrent/examples/coco_caption). It mainly holds functions and scripts for image captioning experiments on the COCO dataset. 
+The main files and their usage are as follows.
+(1) coco_to_hdf5_data.py: preprocess captions to hdf5 data. Including tokenizing, building dictionary, etc.
+(2) captioner.py: using beam search or sampling to generate captions.
+(3) hdf5_sequence_generator.py: functions to generate hdf5 dataset from sequence data, such as tokenized captions.
+(4) hdf5_sequence_generator2.py: modified version of "hdf5_sequence_generator.py". It is used for target data with dimension > 1 on each timestep, such as bbox regression target. 
+(5) lrcn.vgg.prototxt, lrcn_solver.vgg.prototxt, train_lrcn.vgg.sh: model structure and training scripts for VGG-LSTM captioning model.
+(6) retrieval_experiment_vgg.py: evaluate the captioning model on COCO. 
