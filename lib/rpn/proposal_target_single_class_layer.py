@@ -1,6 +1,9 @@
+##################################################
 # This layer only applies to single object class
 # Especially for fater-rcnn-lstm since labels no longer denote the object classes 
 # Linjie Yang, Chinese University of Hong Kong
+# 04/21/2016
+###################################################
 import caffe
 import yaml
 import numpy as np

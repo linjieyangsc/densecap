@@ -1,5 +1,9 @@
-#!/usr/bin/env python
-
+##################################################
+# This is a modified version of "hdf5_sequence_generator.py". It is used for target data with dimension > 1 on each timestep, such as bbox regression target. 
+# "hdf5_sequence_generator.py" only allows target data with dimension == 1.
+# Linjie Yang
+# 04/21/2016
+##################################################
 import h5py
 import numpy as np
 import os

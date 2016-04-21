@@ -299,7 +299,7 @@ def main():
   if MAX_IMAGES < 0: MAX_IMAGES = len(dataset.keys())
   captioner = Captioner(MODEL_FILE, IMAGE_NET_FILE, LSTM_NET_FILE, VOCAB_FILE,
                         device_id=DEVICE_ID)
-  beam_size = 2
+  beam_size = 5
 
   generation_strategy = {'type': 'beam', 'beam_size': beam_size}
   if generation_strategy['type'] == 'beam':

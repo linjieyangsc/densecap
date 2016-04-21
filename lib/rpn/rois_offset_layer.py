@@ -1,8 +1,6 @@
 # --------------------------------------------------------
-# Faster R-CNN
-# Copyright (c) 2015 Microsoft
-# Licensed under The MIT License [see LICENSE for details]
-# Written by Ross Girshick and Sean Bell
+# Linjie Yang
+# 04/21/2016
 # --------------------------------------------------------
 
 import caffe
@@ -16,8 +14,7 @@ DEBUG = False
 
 class RoisOffsetLayer(caffe.Layer):
     """
-    Assign object detection proposals to ground-truth targets. Produces proposal
-    classification labels and bounding-box regression targets.
+    Using the predicted bbox offsets to recalculate the offset from ground truth bboxes to the region of interests. 
     """
 
     def setup(self, bottom, top):
@@ -52,7 +49,7 @@ class RoisOffsetLayer(caffe.Layer):
         #copy the adjust rois with time step 0 --> time_steps-1
         for t in xrange(self._time_steps-1):
             rois_offset = _compute_rois_offset(
-                    rois[:, 1:5], gt_boxes[gt_assignment, :4],pred_offset[t,:,:], im_info)
+                    gt_boxes[gt_assignment, :4],pred_offset[t,:,:], im_info)
             top[0].data[(t + 1) * num_rois : (t + 2) * num_rois, 1:5] = rois_offset
         
 
@@ -65,14 +62,12 @@ class RoisOffsetLayer(caffe.Layer):
         pass
 
 
-def _compute_rois_offset(ex_rois, gt_rois, offset, im_info):
-    """Compute bounding-box regression targets for an image."""
+def _compute_rois_offset(gt_rois, offset, im_info):
+    """Compute bounding-box offset for region of interests"""
 
-    assert ex_rois.shape[0] == gt_rois.shape[0]
-    assert ex_rois.shape[1] == 4
+    
     assert gt_rois.shape[1] == 4
     assert offset.shape[1] == 4
-    assert ex_rois.shape[0] == offset.shape[0]
     
     if cfg.TRAIN.BBOX_NORMALIZE_TARGETS_PRECOMPUTED:
         # Optionally normalize targets by a precomputed mean and stdev -- reverse the transformation

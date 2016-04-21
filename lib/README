@@ -1,0 +1,17 @@
+===============================
+Linjie Yang
+04/21/2016
+===============================
+This folder is originally from Ross Girshick's faster-rcnn implementation (https://github.com/rbgirshick/py-faster-rcnn). It includes Python functions for preprocessing data, training and testing the model, and specific python layers for this network framework.
+To use Python layers, be sure to set BUILD_python_layer=ON while compiling Caffe.
+This package is modified to support the faster-rcnn-lstm structure for dense captioning. Meanwhile it is still compatible with the faster-rcnn detection framework.
+Here is the list of files that are newly added for the faster-rcnn-lstm framework.
+Preprocessing:
+  (1) datasets/visual_genome.py: data preparation for the visual genome dataset. Preprocessed caption data already saved at "models/dense_cap/h5_data_distill/buffer_100".
+New layers:
+  (2) rpn/proposal_target_single_class_layer.py: Modified from "rpn/proposal_target_layer.py", used for assigning object detection proposals to ground-truth targets. Produces proposal classification labels and bounding-box regression targets. Remove the object class related operation in the original layer to accommodate the captioning model which does not have the "class" attribute.
+  (3) rpn/sentence_data_layer.py: accepts region indices and input and produces corresponding vectorized captions. For background regions, fill blank captions. 
+  (4) rpn/rois_offset_layer.py: used in the cross-flow version of model. Used for generating new bbox locations after shifted by the predicted offset of the previous timestep. 
+Evaluation:
+  (5) fast_rcnn/test_cap.py: evaluate model with the DenseCap routine. Caculate Meteor score and mean AP. ****This function is not tested yet.****
+

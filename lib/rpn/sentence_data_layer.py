@@ -1,11 +1,14 @@
+##################################
 # This python layer accepts region ids as input and retrieves region sentences for them.
 # Linjie Yang, Chinese University of Hong Kong
+# 04/21/2016
+###############################
 import caffe
 import numpy as np
 import yaml
 import cPickle
 class SentenceDataLayer(caffe.Layer):
-    """Fast R-CNN data layer used for training."""
+    """This python layer accepts region ids as input and retrieves region sentences for them."""
 
 
 
