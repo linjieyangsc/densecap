@@ -2,7 +2,7 @@
 Linjie Yang
 06/20/2016
 ====================================
-This folder holds scripts for training and evaluating the faster-rcnn-lstm captioning model. Note that the training/testing framework of this kind of model is different from the other models. It generally follows the faster-rcnn framework, which utilize the Python Wrapper of Caffe to take care of each step in the training and testing: reading data, organizing mini-batches, snapshotting, logging, evaluating. It utilizes a lot of python layers which are located in "lib" folder.
+This folder holds scripts for training and evaluating the faster-rcnn-lstm captioning model. Note that the training/testing framework of this kind of model is different from the other models. It generally follows the faster-rcnn framework, which utilizes the Python Wrapper of Caffe to take care of each step in the training and testing: reading data, organizing mini-batches, snapshotting, logging, evaluating. It utilizes a lot of python layers which are located in "lib" folder.
 Preprocessing is taken care of by "vg_to_hdf5_data.py" in "models/dense_cap".
 The main files and the descriptions are as follows.
   There are three kind of network strucutures:

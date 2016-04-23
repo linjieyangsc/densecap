@@ -118,9 +118,6 @@ def _greedy_search(net, blobs, proposal_n, max_timestep = 15):
     """Do greedy search to find the regions and captions"""
     # Data preparation
     
-    forward_kwargs = {'data': blobs['data'].astype(np.float32, copy=False)}
-    
-    forward_kwargs['im_info'] = blobs['im_info'].astype(np.float32, copy=False)
 
     pred_captions = [None] * proposal_n
     pred_locations = [None] * proposal_n
@@ -153,26 +150,26 @@ def _greedy_search(net, blobs, proposal_n, max_timestep = 15):
         pred_locations[i] = np.array(pred_locations[i])
     return pred_captions, pred_locations, pred_logprobs
 
-def im_detect(net, im, boxes=None):
+def im_detect(feature_net, recurrent_net, im, boxes=None):
     """Detect object classes in an image given object proposals.
 
     Arguments:
-        net (caffe.Net): Fast R-CNN network to use
+        feature_net (caffe.Net): CNN model for extracting features
+        recurrent_net (caffe.Net): Recurrent model for generating captions and locations
         im (ndarray): color image to test (in BGR order)
         boxes (ndarray): R x 4 array of object proposals or None (for RPN)
 
     Returns:
-        scores (ndarray): R x K array of object class scores (K includes
-            background as object category 0)
-        boxes (ndarray): R x (4*K) array of predicted bounding boxes
+        scores (ndarray): R x 1 array of object class scores 
+        boxes_seq (list): length R list of caption_n x 4 array of predicted bounding boxes
+        captions (list): length R list of length caption_n list of word tokens (captions)
     """
     # Previously:
     # 1. forward pass of one image
     # 2. get rois, bbox score and bbox prediction
     # Now:
-    # 1. forward pass of one image --> a list of proposals (rois)
-    # 2. for each proposal, do beam search? should be slow
-    # or do batch greedy search, which is done by DenseCap
+    # 1. forward pass of one image --> image features and a list of proposals (rois)
+    # 2. for each proposal, do greedy search, which is the same way of DenseCap
     # 
     blobs, im_scales = _get_blobs(im, boxes)
     im_blob = blobs['data']
@@ -181,40 +178,33 @@ def im_detect(net, im, boxes=None):
         dtype=np.float32)
 
     # reshape network inputs
-    net.blobs['data'].reshape(*(blobs['data'].shape))
-    net.blobs['im_info'].reshape(*(blobs['im_info'].shape))
+    feature_net.blobs['data'].reshape(*(blobs['data'].shape))
+    feature_net.blobs['im_info'].reshape(*(blobs['im_info'].shape))
     
-    proposal_n = something here
-
-    net.blobs['input_sentence'].reshape(1,proposal_n)
-    net.blobs['cont_sentence'].reshape(1, proposal_n)
-    
-
+    #proposal_n = something here
+    feature_net.forward(data = im_blob, im_info = blobs['im_info'])
+    image_features = feature_net.blobs['conv5_3'].data[0].copy()
+    rois = feature_net.blobs['rois'].data.copy()
+    proposal_n = rois.shape[0]
+    feat_blobs = {'image_features': image_features, 'rois': rois}
     # do greedy search
     
-    captions, locations, logprobs = _greedy_search(net, blobs, proposal_n)
-    #blobs_out = net.forward(**forward_kwargs)
+    captions, locations, logprobs = _greedy_search(recurrent_net, feat_blobs, proposal_n)
 
     
     assert len(im_scales) == 1, "Only single-image batch implemented"
-    rois = net.blobs['rois'].data.copy()
-    # unscale back to raw image space
-    boxes = rois[:, 1:5] / im_scales[0]
+    
 
     
     # use rpn scores, combine with caption score later
-    scores = blobs_out['rpn_cls_score']
+    scores = feature_net.blobs['rpn_cls_score'].data.copy()
 
     #bbox transform
     #stacking
-    #boxes_stack = np.zeros((0,4))
-    #box_deltas_stack = np.zeros((0,4))
-    #for box, loc in zip(boxes, locations):
     boxes_stack = np.concatenate([np.tile(box,(1,len(loc))) for box, loc in zip(boxes, locations)])
     box_deltas_stack = np.concatenate(locations)
     group_ids = np.array([len(loc) for loc in locations]).cumsum()
     group_ids = np.insert(group_ids, 0, 0)
-    #box_deltas = np.array()# proposal_n x 4 dimension
     #do the transformation
     pred_boxes_stack = bbox_transform_inv(boxes_stack, box_deltas_stack)
     pred_boxes_stack = clip_boxes(pred_boxes_stack, im.shape)
@@ -223,11 +213,11 @@ def im_detect(net, im, boxes=None):
     
     for i in xrange(proposal_n):
         pred_boxes_seq[i] = pred_boxes_stack[group_ids[i]:group_ids[i+1],:]
-    #score: numpy array, pred_boxes: list of numpy matrix (n_word x 4), captions: list of list of word tokens
+   
     return scores, pred_boxes_seq, captions
 
 def vis_detections(im_path, im, captions, dets, thresh=0.3, save_path ='output/vis/'):
-    """Visual debugging of detections."""
+    """Visual debugging of detections by saving images with detected bboxes."""
     import matplotlib.pyplot as plt
     im = im[:, :, (2, 1, 0)]
     for i in xrange(np.minimum(10, dets.shape[0])):
@@ -276,14 +266,14 @@ def sentence(vocab, vocab_indices):
     sentence = ' '.join([vocab[i] for i in vocab_indices])
     return sentence
 
-def test_net(net, imdb, max_per_image=100, thresh=0.05, vis=False):
+def test_net(feature_net, recurrent_net, imdb, max_per_image=100, thresh=0.05, vis=False):
     """Test a Fast R-CNN network on an image database."""
     num_images = len(imdb.image_index)
     # all detections are collected into:
     #    all_regions[image] = list of {'image_id', caption', 'location', 'location_seq'}
     all_regions = [None] * num_images
 
-    output_dir = get_output_dir(imdb, net)
+    output_dir = get_output_dir(imdb, feature_net)
 
     # timers
     _t = {'im_detect' : Timer(), 'misc' : Timer()}
@@ -307,7 +297,7 @@ def test_net(net, imdb, max_per_image=100, thresh=0.05, vis=False):
 
         im = cv2.imread(imdb.image_path_at(i))
         _t['im_detect'].tic()
-        scores, boxes_seq, captions = im_detect(net, im, box_proposals)
+        scores, boxes_seq, captions = im_detect(feature_net, recurrent_net, im, box_proposals)
         #features = extract_feature(net, im)
 
         _t['im_detect'].toc()
