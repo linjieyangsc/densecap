@@ -1,10 +1,10 @@
-#!/bin/bash
+    #!/bin/bash
 # Usage:
 # ./experiments/scripts/faster_rcnn_end2end.sh GPU DATASET [options args to {train,test}_net.py]
 # DATASET is either pascal_voc or coco.
 #
 # Example:
-# ./models/faster_rcnn_cap/faster_rcnn_cross.sh 3 visual_genome
+# ./models/faster_rcnn_cap/faster_rcnn_cross.sh 8 visual_genome
 
 set -x
 set -e

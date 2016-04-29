@@ -670,7 +670,6 @@ layer {
   type: "Python"
   bottom: "predict_loc"
   bottom: "rois"
-  bottom: "gt_boxes"
   bottom: "im_info"
   top: "rois_offset"
   python_param {
@@ -679,6 +678,20 @@ layer {
     param_str: "" 
   }
 }
+
+layer {
+  name: 'bbox_targets_offset'
+  type: 'Python'
+  bottom: 'rois_offset'
+  bottom: 'bbox_targets'
+  top: 'bbox_targets_shifted'
+    python_param {
+    module: 'rpn.bbox_targets_offset_layer'
+    layer: 'BBoxTargetsOffsetLayer'
+    param_str: "" 
+  }
+}
+
 # extract pooled feature of predicted rois
 layer {
   name: "roi_offset_pool5"
@@ -779,34 +792,12 @@ layer {
     tiles: 4
   }
 }
-layer {
-  name: "bbox_tile"
-  type: "Tile"
-  bottom: "bbox_targets"
-  top: "bbox_tile"
-  tile_param {
-    axis: 0
-    tiles: 11
-  }
-}
-layer{
-  name: "bbox_tile_reshape"
-  type: "Reshape"
-  bottom: "bbox_tile"
-  top: "bbox_tile_reshape"
-  reshape_param {
-    shape {
-      dim: 11
-      dim: -1
-      dim: 4
-    }
-  }
-}
+
 layer {
   name: "smooth_l1_loss"
   type: "SmoothL1Loss"
   bottom: "predict_loc"
-  bottom: "bbox_tile_reshape"
+  bottom: "bbox_targets_shifted"
   bottom: "cont_tile"
   bottom: "cont_tile"
   top: "smooth_l1_loss"

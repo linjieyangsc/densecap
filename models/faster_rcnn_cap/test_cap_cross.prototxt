@@ -235,4 +235,16 @@ layer {
     axis: 2
   }
 }
-
+layer {
+  name: "rois_offset"
+  type: "Python"
+  bottom: "predict_loc"
+  bottom: "rois"
+  bottom: "im_info"
+  top: "rois_offset"
+  python_param {
+    module: 'rpn.rois_offset_layer'
+    layer: 'RoisOffsetLayer'
+    param_str: "" 
+  }
+}

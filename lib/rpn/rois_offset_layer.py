@@ -9,7 +9,6 @@ import numpy as np
 import numpy.random as npr
 from fast_rcnn.config import cfg
 from fast_rcnn.bbox_transform import bbox_transform_inv, clip_boxes
-from utils.cython_bbox import bbox_overlaps
 DEBUG = False
 
 class RoisOffsetLayer(caffe.Layer):
@@ -30,16 +29,7 @@ class RoisOffsetLayer(caffe.Layer):
         pred_offset = bottom[0].data
         num_rois = bottom[0].data.shape[1]
         rois = bottom[1].data
-        gt_boxes = bottom[2].data
-        im_info = bottom[3].data[0,:]
-        overlaps = bbox_overlaps(
-        np.ascontiguousarray(rois[:, 1:5], dtype=np.float),
-        np.ascontiguousarray(gt_boxes[:, :4], dtype=np.float))
-        gt_assignment = overlaps.argmax(axis=1)
-
-    
-
-        
+        im_info = bottom[2].data[0,:]
 
         # new rois
         top[0].reshape(self._time_steps * num_rois, 5)
@@ -48,8 +38,9 @@ class RoisOffsetLayer(caffe.Layer):
         top[0].data[:num_rois,:] = rois
         #copy the adjust rois with time step 0 --> time_steps-1
         for t in xrange(self._time_steps-1):
-            rois_offset = _compute_rois_offset(
-                    gt_boxes[gt_assignment, :4],pred_offset[t,:,:], im_info)
+            rois_prev = top[0].data[t * num_rois : (t + 1) * num_rois, 1:5]
+            rois_offset = compute_rois_offset(
+                    rois_prev, pred_offset[t,:,:], im_info)
             top[0].data[(t + 1) * num_rois : (t + 2) * num_rois, 1:5] = rois_offset
         
 
@@ -61,17 +52,18 @@ class RoisOffsetLayer(caffe.Layer):
         """Reshaping happens during the call to forward."""
         pass
 
-
-def _compute_rois_offset(gt_rois, offset, im_info):
+# compute the new bboxes shifted by offset from rois
+def compute_rois_offset(rois, offset, im_info=None):
     """Compute bounding-box offset for region of interests"""
 
     
-    assert gt_rois.shape[1] == 4
+    assert rois.shape[1] == 4
     assert offset.shape[1] == 4
     
     if cfg.TRAIN.BBOX_NORMALIZE_TARGETS_PRECOMPUTED:
         # Optionally normalize targets by a precomputed mean and stdev -- reverse the transformation
         offset = offset * np.array(cfg.TRAIN.BBOX_NORMALIZE_STDS) + np.array(cfg.TRAIN.BBOX_NORMALIZE_MEANS)
-    rois_offset = bbox_transform_inv(gt_rois, offset)         
-    rois_offset = clip_boxes(rois_offset, im_info[:2])
+    rois_offset = bbox_transform_inv(rois, offset)
+    if not im_info is None:         
+        rois_offset = clip_boxes(rois_offset, im_info[:2])
     return rois_offset

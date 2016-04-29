@@ -63,8 +63,12 @@ class visual_genome(imdb):
         image_index = [key for key in self._gt_regions]
         
         return image_index
+        
     def get_gt_regions(self):
         return [v for k,v in self._gt_regions.iteritems()]
+
+    def get_vocabulary(self):
+        return self._vocabulary_inverted
 
     def gt_roidb(self):
         """

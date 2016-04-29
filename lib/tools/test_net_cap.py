@@ -10,7 +10,7 @@
 """Test a Fast R-CNN network on an image database."""
 
 import _init_paths
-from fast_rcnn.test import test_net
+from fast_rcnn.test_cap import test_net
 from fast_rcnn.config import cfg, cfg_from_file, cfg_from_list
 from datasets.factory import get_imdb
 import caffe
@@ -89,5 +89,5 @@ if __name__ == '__main__':
     imdb.competition_mode(args.comp_mode)
     if not cfg.TEST.HAS_RPN:
         imdb.set_proposal_method(cfg.TEST.PROPOSAL_METHOD)
-
+    #print args.max_per_image
     test_net(feature_net, recurrent_net, imdb, max_per_image=args.max_per_image, vis=args.vis)

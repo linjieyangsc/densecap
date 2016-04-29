@@ -28,7 +28,7 @@ punct_list = ['.','?','!']
 # Remove punctuations or not
 REMOVE_PUNCT=True
 # preload vocabulary or not
-PRELOAD_VOCAB=False
+PRELOAD_VOCAB=True
 BASE_DIR = 'models/dense_cap'
 VOCAB_PATH = '%s/h5_data_distill/buffer_100/vocabulary.txt' % BASE_DIR
 from hdf5_sequence_generator2 import SequenceGenerator, HDF5SequenceWriter
@@ -69,7 +69,7 @@ class VGSequenceGenerator(SequenceGenerator):
 				if obj['width'] == 0 or obj['height'] ==0:
 					num_invalid_bbox += 1
 					continue
-				phrase  = obj['phrase'].strip()
+				phrase  = obj['phrase'].strip().lower()
 				#strip referring words
 				for w in strip_words:
 					if phrase[:len(w)] == w:
@@ -79,7 +79,7 @@ class VGSequenceGenerator(SequenceGenerator):
 					continue
 				if REMOVE_PUNCT and phrase[-1] in punct_list:
 					phrase = phrase[:-1]
-				obj['phrase_tokens'] = nltk.word_tokenize(phrase.lower())
+				obj['phrase_tokens'] = nltk.word_tokenize(phrase)
 				#remove regions with caption longer than max_words
 				if len(obj['phrase_tokens']) >= max_words:
 					continue
@@ -260,9 +260,8 @@ def process_dataset(split_name, coco_split_name, batch_stream_length,
 	split_image_ids = []
 	with open(SPLITS_PATTERN % split_name, 'r') as split_file:
 		for line in split_file.readlines():
-			test_id = line.strip()[:-4]
-			if test_id.isdigit():
-				split_image_ids.append(int(test_id))
+			line_id = int(line.strip())
+			split_image_ids.append(line_id)
 	print 'split image number: %d' % len(split_image_ids)
 	output_dataset_name = split_name
 	if aligned:
@@ -312,9 +311,10 @@ def process_vg(include_trainval=False):
 			vocab = [line.strip() for line in f]
 
 	datasets = [
-			('train', 'train', 100000, True),
-			('val', 'val', 100000, True),
-			('test', 'val', 100000, True),
+	#		('train', 'train', 100000, True),
+	#		('val', 'val', 100000, True),
+	#		('test', 'val', 100000, True),
+			('test_subset', 'test_subset', 100000, True)
 		]
 	# Also create a 'trainval' set if include_trainval is set.
 	# ./data/coco/make_trainval.py must have been run for this to work.

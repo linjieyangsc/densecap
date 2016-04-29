@@ -12,6 +12,7 @@ from fast_rcnn.bbox_transform import clip_boxes, bbox_transform_inv
 import argparse
 from utils.timer import Timer
 import numpy as np
+import math
 import cv2
 import caffe
 from fast_rcnn.nms_wrapper import nms
@@ -19,7 +20,7 @@ import json
 from utils.blob import im_list_to_blob
 import os
 import sys
-sys.path.add('models/dense_cap/')
+sys.path.append('models/dense_cap/')
 from run_experiment_vgg_vg import gt_region_merge, get_bbox_coord
 from vg_to_hdf5_data import *
 #sys.path.add('examples/coco-caption')
@@ -28,7 +29,7 @@ COCO_EVAL_PATH = '/media/researchshare/linjie/data/MS_COCO/coco-caption/'
 sys.path.append(COCO_EVAL_PATH)
 from pycocoevalcap.vg_eval import VgEvalCap
 eps = 1e-10
-
+DEBUG=True
 def _get_image_blob(im):
     """Converts an image into a network input.
 
@@ -114,7 +115,7 @@ def _get_blobs(im, rois):
     if not cfg.TEST.HAS_RPN:
         blobs['rois'] = _get_rois_blob(rois, im_scale_factors)
     return blobs, im_scale_factors
-def _greedy_search(net, blobs, proposal_n, max_timestep = 15):
+def _greedy_search(net, forward_args, proposal_n, max_timestep = 15):
     """Do greedy search to find the regions and captions"""
     # Data preparation
     
@@ -122,29 +123,39 @@ def _greedy_search(net, blobs, proposal_n, max_timestep = 15):
     pred_captions = [None] * proposal_n
     pred_locations = [None] * proposal_n
     pred_logprobs = [0.0] * proposal_n
-    # first step
-    #proposal_n = something here
-    forward_kwargs['cont_sentence'] = np.zeros((1,proposal_n))
-    forward_kwargs['input_sentence'] = np.zeros((1,proposal_n)) 
+    
+    # first time step
+    
+    #forward_args['']
+    forward_args['cont_sentence'] = np.zeros((1,proposal_n))
+    forward_args['input_sentence'] = np.zeros((1,proposal_n)) 
+    # reshape blobs
+    for k, v in forward_args.iteritems():
+        if DEBUG:
+            print 'shape of %s is ' % k
+            print v.shape
+        net.blobs[k].reshape(*(v.shape))
+
     for step in xrange(max_timestep):
-        blobs_out = net.forward(**forward_kwargs)#or do a partial forward
-        pred_location = blobs_out['predict_loc'].reshape(proposal_n, 4)
+        blobs_out = net.forward(**forward_args)
+        pred_location = blobs_out['predict_loc'].reshape(proposal_n, 4)# 1 x proposal_n x 4 --> proposal_n x 4
         word_probs = blobs_out['probs']
         #suppress <unk> tag
         word_probs[:,:,1] = 0
         best_words = word_probs.argmax(axis = 2).reshape(proposal_n)
 
         for i, w, loc in zip(range(proposal_n), best_words, pred_location):
-            if len(pred_captions[i]) == 0:
+            if not pred_captions[i]:
                 pred_captions[i] = [w]
                 pred_locations[i] = [loc]
                 pred_logprobs[i] = math.log(word_probs[0,i,w] + eps)
-            else if pred_captions[i][-1] != 0:
+            elif pred_captions[i][-1] != 0:
                 pred_captions[i].append(w)
                 pred_locations[i].append(loc)
                 pred_logprobs[i] += math.log(word_probs[0,i,w] + eps)
-        forward_kwargs['input_sentence'][:] = best_words
-        forward_kwargs['cont_sentence'][:] = 1
+        forward_args['input_sentence'][:] = best_words
+        forward_args['cont_sentence'][:] = 1
+        
     #transform location sequence to numpy matrix
     for i in xrange(proposal_n):
         pred_locations[i] = np.array(pred_locations[i])
@@ -183,13 +194,14 @@ def im_detect(feature_net, recurrent_net, im, boxes=None):
     
     #proposal_n = something here
     feature_net.forward(data = im_blob, im_info = blobs['im_info'])
-    image_features = feature_net.blobs['conv5_3'].data[0].copy()
+    image_features = feature_net.blobs['conv5_3'].data.copy()
     rois = feature_net.blobs['rois'].data.copy()
+    boxes = rois[:, 1:5] / im_scales[0]
     proposal_n = rois.shape[0]
-    feat_blobs = {'image_features': image_features, 'rois': rois}
+    feat_args = {'image_features': image_features, 'rois': rois}
     # do greedy search
     
-    captions, locations, logprobs = _greedy_search(recurrent_net, feat_blobs, proposal_n)
+    captions, locations, logprobs = _greedy_search(recurrent_net, feat_args, proposal_n)
 
     
     assert len(im_scales) == 1, "Only single-image batch implemented"
@@ -197,13 +209,14 @@ def im_detect(feature_net, recurrent_net, im, boxes=None):
 
     
     # use rpn scores, combine with caption score later
-    scores = feature_net.blobs['rpn_cls_score'].data.copy()
+    scores = feature_net.blobs['rpn_scores'].data.copy()
 
     #bbox transform
     #stacking
-    boxes_stack = np.concatenate([np.tile(box,(1,len(loc))) for box, loc in zip(boxes, locations)])
-    box_deltas_stack = np.concatenate(locations)
-    group_ids = np.array([len(loc) for loc in locations]).cumsum()
+
+    boxes_stack = np.concatenate([np.tile(box,(loc.shape[0],1)) for box, loc in zip(boxes, locations)])
+    box_deltas_stack = np.concatenate(locations) # horizontally stacking
+    group_ids = np.array([loc.shape[0] for loc in locations]).cumsum()
     group_ids = np.insert(group_ids, 0, 0)
     #do the transformation
     pred_boxes_stack = bbox_transform_inv(boxes_stack, box_deltas_stack)
@@ -269,6 +282,8 @@ def sentence(vocab, vocab_indices):
 def test_net(feature_net, recurrent_net, imdb, max_per_image=100, thresh=0.05, vis=False):
     """Test a Fast R-CNN network on an image database."""
     num_images = len(imdb.image_index)
+    if DEBUG:
+        print 'number of images: %d' % num_images
     # all detections are collected into:
     #    all_regions[image] = list of {'image_id', caption', 'location', 'location_seq'}
     all_regions = [None] * num_images
@@ -281,7 +296,7 @@ def test_net(feature_net, recurrent_net, imdb, max_per_image=100, thresh=0.05, v
     if not cfg.TEST.HAS_RPN:
         roidb = imdb.roidb
     #read vocabulary
-    vocab_path = imdb.vocab_path
+    vocab = imdb.get_vocabulary()
 
     for i in xrange(num_images):
         # filter out any ground truth boxes
@@ -304,16 +319,23 @@ def test_net(feature_net, recurrent_net, imdb, max_per_image=100, thresh=0.05, v
 
         _t['misc'].tic()
         # only one positive class
-        inds = np.where(scores[:, 1] > thresh)[0]
-        pos_scores = scores[inds, 1]
+        if DEBUG:
+            print 'shape of scores'
+            print scores.shape
+        inds = np.where(scores > thresh)[0]
+        pos_scores = scores[inds]
         # get the last predicted box
-        pos_boxes = boxes_seq[inds][-1,:]
-        pos_dets = np.hstack((pos_boxes, pos_scores[:, np.newaxis])) \
+        pos_boxes_seq = [boxes_seq[idx] for idx in inds]
+        pos_boxes = np.array([bs[-1,:] for bs in pos_boxes_seq])
+        pos_captions = [captions[idx] for idx in inds]
+        print pos_boxes.shape
+        print pos_scores.shape
+        pos_dets = np.hstack((pos_boxes, pos_scores)) \
             .astype(np.float32, copy=False)
         keep = nms(pos_dets, cfg.TEST.NMS)
         pos_dets = pos_dets[keep, :]
-        pos_captions = captions[keep]
-        pos_boxes_seq = boxes_seq[keep]
+        pos_captions = [pos_captions[idx] for idx in keep]
+        pos_boxes_seq = [pos_boxes_seq[idx] for idx in keep]
         if vis:
             #TODO(Linjie): display location sequence
             vis_detections(imdb.image_path_at(i), im, pos_captions, pos_dets, save_path = os.path.join(output_dir,'vis'))
@@ -321,8 +343,8 @@ def test_net(feature_net, recurrent_net, imdb, max_per_image=100, thresh=0.05, v
         #follow the format of baseline models routine
         for cap, box_seq in zip(pos_captions, pos_boxes_seq):
             #region sizes normalize to [0, 1], follow baseline model routine
-            box_seq[:, [0, 2]] /= im.shape[1]
-            box_seq[:, [1, 3]] /= im.shape[0]
+            #box_seq[:, [0, 2]] /= im.shape[1]
+            #box_seq[:, [1, 3]] /= im.shape[0]
             anno = {'image_id':i, 'caption':sentence(vocab, cap), 'location_seq': box_seq.tolist(), 'location': box_seq[-1,:].tolist()}
             all_regions[i].append(anno)
 
@@ -348,11 +370,23 @@ def test_net(feature_net, recurrent_net, imdb, max_per_image=100, thresh=0.05, v
    
     
     gt_regions = imdb.get_gt_regions() # is a list
-    gt_regions_trans = [None] * num_images
+    gt_regions_merged = [None] * num_images
     #transform gt_regions into the baseline model routine
     for i,regions in enumerate(gt_regions):
-        for reg in regions:
-            anno = {'image_id':i, 'caption': reg['phrase'], 'location': reg['location']}
-        gt_regions[i]
-    #merge regions with large overlapped areas
-    gt_regions[image_index] = gt_region_merge(new_gt_regions)
+        new_gt_regions = []
+        
+        for reg in regions['regions']:
+            if DEBUG:
+                print 'region info'
+                print reg
+            loc = np.array([reg['x'], reg['y'], reg['x'] + reg['width'], reg['y'] + reg['height']])
+            anno = {'image_id':i, 'caption': reg['phrase'], 'location': loc}
+            new_gt_regions.append(anno)
+        #merge regions with large overlapped areas
+        assert(len(new_gt_regions) > 0)
+        gt_regions_merged[i] = gt_region_merge(new_gt_regions)
+    image_ids = range(num_images)
+    vg_evaluator = VgEvalCap(gt_regions_merged, all_regions)
+    vg_evaluator.params['image_id'] = image_ids
+    vg_evaluator.evaluate()
+    

@@ -11,7 +11,7 @@ import numpy.random as npr
 from fast_rcnn.config import cfg
 from fast_rcnn.bbox_transform import bbox_transform
 from utils.cython_bbox import bbox_overlaps
-
+from rois_offset_layer import compute_rois_offset
 DEBUG = False
 
 class ProposalTargetLayer(caffe.Layer):
@@ -62,13 +62,7 @@ class ProposalTargetLayer(caffe.Layer):
         if DEBUG:
             print 'num fg: {}'.format((labels > 0).sum())
             print 'num bg: {}'.format((labels == 0).sum())
-            self._count += 1
-            self._fg_num += (labels > 0).sum()
-            self._bg_num += (labels == 0).sum()
-            print 'num fg avg: {}'.format(self._fg_num / self._count)
-            print 'num bg avg: {}'.format(self._bg_num / self._count)
-            print 'ratio: {:.3f}'.format(float(self._fg_num) / float(self._bg_num))
-
+           
         # sampled rois
         top[0].reshape(*rois.shape)
         top[0].data[...] = rois
@@ -163,7 +157,13 @@ def _sample_rois(all_rois, gt_boxes, fg_rois_per_image, rois_per_image):
 
     bbox_target_data = _compute_targets(
         rois[:, 1:5], gt_boxes[gt_assignment[keep_inds], :4], labels)
-
+    if DEBUG:
+        target_boxes = compute_rois_offset(rois[:, 1:5], bbox_target_data[:, 1:5])
+        match_boxes = gt_boxes[gt_assignment[keep_inds], :4]
+        print 'boxes consistency check'
+        print target_boxes[:2,:]
+        print match_boxes[:2,:]
+        assert np.linalg.norm(target_boxes - match_boxes) < 0.01
     bbox_targets = \
         _get_bbox_regression_labels(bbox_target_data)
 
