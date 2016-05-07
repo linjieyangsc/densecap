@@ -40,7 +40,7 @@ case $DATASET in
     TRAIN_IMDB="vg_train"
     TEST_IMDB="vg_val"
     PT_DIR="faster_rcnn_cap"
-    ITERS=150000
+    ITERS=200000
     ;;
   *)
     echo "No dataset given"
@@ -50,7 +50,7 @@ esac
 
 time ./lib/tools/train_net.py --gpu ${GPU_ID} \
   --solver models/${PT_DIR}/solver_cont.prototxt \
-  --weights output/faster_rcnn_end2end/vg_train/faster_rcnn_cap_iter_150000.caffemodel \
+  --weights output/faster_rcnn_end2end/vg_train/faster_rcnn_cap_iter_100000.caffemodel \
   --imdb ${TRAIN_IMDB} \
   --iters ${ITERS} \
   --cfg models/${PT_DIR}/faster_rcnn_end2end.yml \

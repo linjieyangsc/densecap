@@ -11,11 +11,13 @@ import caffe
 from fast_rcnn.config import cfg
 import roi_data_layer.roidb as rdl_roidb
 from utils.timer import Timer
+from utils.debug import softmax
 import numpy as np
 import os
 
 from caffe.proto import caffe_pb2
 import google.protobuf as pb2
+DEBUG=False
 
 class SolverWrapper(object):
     """A simple wrapper around Caffe's solver.
@@ -94,14 +96,40 @@ class SolverWrapper(object):
         """Network training loop."""
         last_snapshot_iter = -1
         timer = Timer()
-        model_paths = []
         while self.solver.iter < max_iters:
             # Make one SGD update
             timer.tic()
             self.solver.step(1)
             timer.toc()
+            if DEBUG:
+
+                predict_scores = self.solver.net.blobs['predict'].data
+                predict_labels = np.argmax(predict_scores, axis = 2)
+                print 'predicted labels sample'
+                print predict_labels[:,:2]
+                target_labels = self.solver.net.blobs['target_sentence'].data
+                print 'target labels sample'
+                print target_labels[:,:2] 
+                predict_probs = softmax(predict_scores)
+                predict_logprobs = np.log(predict_probs)
+                target_probs = np.zeros_like(target_labels)
+                loss = 0
+                time_steps = target_labels.shape[0]
+                samples = target_labels.shape[1]
+                for i in xrange(time_steps):
+                    for j in xrange(samples):
+                        if target_labels[i,j] > -1:
+                            loss += predict_logprobs[i,j,target_labels[i,j]]
+                            target_probs[i,j] = predict_probs[i,j,target_labels[i,j]]
+                loss /= np.sum(target_labels > -1)
+                print 'target probs sample'
+                print target_probs[:,:2] 
+                print 'per word loss: %.3f' % loss
+                word_accuracy = np.sum(predict_labels == target_labels)/np.sum(target_labels > -1)
+                print 'word accuracy: %.3f' % word_accuracy
             if self.solver.iter % (10 * self.solver_param.display) == 0:
                 print 'speed: {:.3f}s / iter'.format(timer.average_time)
+            #if self.solver_param.test_interval>0 and self.solver.iter % self.solver_param.test_interval == 0:
 
             if self.solver.iter % cfg.TRAIN.SNAPSHOT_ITERS == 0:
                 last_snapshot_iter = self.solver.iter

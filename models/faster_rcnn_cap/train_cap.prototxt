@@ -140,10 +140,10 @@ layer {
   bottom: "pool2"
   top: "conv3_1"
   param {
-    lr_mult: 0.1
+    lr_mult: 0
   }
   param {
-    lr_mult: 0.2
+    lr_mult: 0
   }
   convolution_param {
     num_output: 256
@@ -163,10 +163,10 @@ layer {
   bottom: "conv3_1"
   top: "conv3_2"
   param {
-    lr_mult: 0.1
+    lr_mult: 0
   }
   param {
-    lr_mult: 0.2
+    lr_mult: 0
   }
   convolution_param {
     num_output: 256
@@ -186,10 +186,10 @@ layer {
   bottom: "conv3_2"
   top: "conv3_3"
   param {
-    lr_mult: 0.1
+    lr_mult: 0
   }
   param {
-    lr_mult: 0.2
+    lr_mult: 0
   }
   convolution_param {
     num_output: 256
@@ -220,10 +220,10 @@ layer {
   bottom: "pool3"
   top: "conv4_1"
   param {
-    lr_mult: 0.1
+    lr_mult: 0
   }
   param {
-    lr_mult: 0.2
+    lr_mult: 0
   }
   convolution_param {
     num_output: 512
@@ -243,10 +243,10 @@ layer {
   bottom: "conv4_1"
   top: "conv4_2"
   param {
-    lr_mult: 0.1
+    lr_mult: 0
   }
   param {
-    lr_mult: 0.2
+    lr_mult: 0
   }
   convolution_param {
     num_output: 512
@@ -266,10 +266,10 @@ layer {
   bottom: "conv4_2"
   top: "conv4_3"
   param {
-    lr_mult: 0.1
+    lr_mult: 0
   }
   param {
-    lr_mult: 0.2
+    lr_mult: 0
   }
   convolution_param {
     num_output: 512
@@ -300,10 +300,10 @@ layer {
   bottom: "pool4"
   top: "conv5_1"
   param {
-    lr_mult: 0.1
+    lr_mult: 0
   }
   param {
-    lr_mult: 0.2
+    lr_mult: 0
   }
   convolution_param {
     num_output: 512
@@ -323,10 +323,10 @@ layer {
   bottom: "conv5_1"
   top: "conv5_2"
   param {
-    lr_mult: 0.1
+    lr_mult: 0
   }
   param {
-    lr_mult: 0.2
+    lr_mult: 0
   }
   convolution_param {
     num_output: 512
@@ -346,10 +346,10 @@ layer {
   bottom: "conv5_2"
   top: "conv5_3"
   param {
-    lr_mult: 0.1
+    lr_mult: 0
   }
   param {
-    lr_mult: 0.2
+    lr_mult: 0
   }
   convolution_param {
     num_output: 512
@@ -444,7 +444,7 @@ layer {
   propagate_down: 1
   propagate_down: 0
   top: "rpn_cls_loss"
-  loss_weight: 10
+  loss_weight: 1
   loss_param {
     ignore_label: -1
     normalize: true
@@ -566,7 +566,7 @@ layer {
   python_param {
     module: 'rpn.sentence_data_layer'
     layer: 'SentenceDataLayer'
-    param_str: "{'time_steps': 11, 'phrase_path': '/home/a-linjieyang/work/caffe/caffe_s2vt/models/dense_cap/h5_data_distill/buffer_100/train_gt_phrases.pkl'}" 
+    param_str: "{'time_steps': 11, 'phrase_path': 'models/dense_cap/h5_data_distill/buffer_100/train_gt_phrases.pkl'}" 
   }
 }
 layer {
@@ -724,8 +724,9 @@ layer {
   bottom: "predict_loc"
   bottom: "bbox_tile_reshape"
   bottom: "cont_tile"
+  bottom: "cont_tile" 
   top: "smooth_l1_loss"
-  loss_weight: 1
+  loss_weight: 0.1
 }
 layer {
   name: "predict"
@@ -762,7 +763,7 @@ layer {
   top: "cross_entropy_loss"
   propagate_down: 1
   propagate_down: 0
-  loss_weight: 5
+  loss_weight: 1
   loss_param {
     ignore_label: -1
   }

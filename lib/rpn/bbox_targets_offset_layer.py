@@ -6,6 +6,7 @@
 import caffe
 import yaml
 import numpy as np
+import pprint
 import numpy.random as npr
 from fast_rcnn.config import cfg
 from fast_rcnn.bbox_transform import bbox_transform
@@ -37,25 +38,34 @@ class BBoxTargetsOffsetLayer(caffe.Layer):
         #time_steps = num_rois_offset / num_rois
         # get original target bboxes
         rois_original = rois_offset[:num_rois, 1:5]
+
         target_bboxes = compute_rois_offset(rois_original, bbox_targets)
         # new targets
         top[0].reshape(self._time_steps, num_rois, 4)
         
         #copy bbox targets to the first time step of bbox_targets_offset
         top[0].data[0,:,:] = bbox_targets
+        # print 'rois'
+        # print rois_original
+        # print 'bbox targets'
+        # print bbox_targets
         #copy the adjust bbox targets with time step 1 --> time_steps
         for t in xrange(1, self._time_steps):
             targets_prev = top[0].data[t,:,:]
             rois_step = rois_offset[t * num_rois: (t+1) * num_rois,1:5]
-            targets_offset = _compute_targets(rois_step, target_bboxes)
+            targets_shifted = _compute_targets(rois_step, target_bboxes)
+            # print 'rois shifted at time %d' % t
+            # print rois_step
+            # print 'targets shifted at time %d' % t
+            # print targets_shifted
             if DEBUG:
-                shifted_bboxes = compute_rois_offset(rois_step, targets_offset)
+                shifted_bboxes = compute_rois_offset(rois_step, targets_shifted)
                 print 'check bbox consistency'
                 print shifted_bboxes[:2,:]
                 print target_bboxes[:2,:]
                 #print np.linalg.norm(shifted_bboxes - target_bboxes)
                 assert np.linalg.norm(shifted_bboxes - target_bboxes) < 0.01
-            top[0].data[t,:,:] = targets_offset
+            top[0].data[t,:,:] = targets_shifted
         
 
     def backward(self, top, propagate_down, bottom):

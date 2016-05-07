@@ -256,10 +256,10 @@ def main():
     DATASET_NAME = 'test'
   else:  # eval on val
     ITER = 100000
-    MODEL_FILENAME = 'lrcn2_finetune3_vgg_iter_%d' % ITER
+    MODEL_FILENAME = 'lrcn2_finetune2_vgg_iter_%d' % ITER
     DATASET_NAME = 'snapchat'
   TAG += '_%s' % DATASET_NAME
-  MODEL_DIR = './models/lstm'
+  MODEL_DIR = './models/lstm/results'
   MODEL_FILE = '%s/%s.caffemodel' % (MODEL_DIR, MODEL_FILENAME)
   IMAGE_NET_FILE = './models/vggnet/deploy.prototxt'
   LSTM_NET_FILE = './models/lstm/lrcn_word_to_preds.deploy.prototxt'
@@ -273,7 +273,7 @@ def main():
     vocab = [line.strip() for line in vocab_file.readlines()]
   #coco = COCO(COCO_ANNO_PATH % DATASET_NAME)
   #image_root = '/media/researchshare/linjie/data/dreamstime/images'#COCO_IMAGE_PATTERN % DATASET_NAME
-  eval_image_file = '/home/a-linjieyang/work/video_caption/snapchat/test_im_list_cap.txt'
+  eval_image_file = '/media/researchshare/linjie/work/video_caption/snapchat/test_im_list_cap.txt'
   #eval_caption_file = '/home/a-linjieyang/work/video_caption/dreamstime/val_list_cap.txt'
   with open(eval_image_file, 'r') as split_file:
     split_images = [line.strip() for line in split_file]

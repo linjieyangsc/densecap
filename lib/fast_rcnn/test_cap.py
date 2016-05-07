@@ -128,22 +128,48 @@ def _greedy_search(net, forward_args, proposal_n, max_timestep = 15):
     
     #forward_args['']
     forward_args['cont_sentence'] = np.zeros((1,proposal_n))
-    forward_args['input_sentence'] = np.zeros((1,proposal_n)) 
+    forward_args['input_sentence'] = np.zeros((1,proposal_n)) # start with EOS
     # reshape blobs
     for k, v in forward_args.iteritems():
         if DEBUG:
             print 'shape of %s is ' % k
             print v.shape
         net.blobs[k].reshape(*(v.shape))
+ 
 
     for step in xrange(max_timestep):
         blobs_out = net.forward(**forward_args)
+
         pred_location = blobs_out['predict_loc'].reshape(proposal_n, 4)# 1 x proposal_n x 4 --> proposal_n x 4
-        word_probs = blobs_out['probs']
+        word_probs = blobs_out['probs'].copy()
+            
         #suppress <unk> tag
         word_probs[:,:,1] = 0
         best_words = word_probs.argmax(axis = 2).reshape(proposal_n)
-
+        if DEBUG:
+            if step == 0:
+                print 'content in blobs_out'
+                for k,v in blobs_out.iteritems():
+                    print k
+                print 'shape of word probs' 
+                print word_probs.shape
+                print 'image features'
+                print forward_args['image_features']
+                print 'mean value'
+                print forward_args['image_features'].mean()
+                print 'roi pooling features'
+                print net.blobs['pool5'].data[:2,:,:]
+                print 'mean value'
+                print net.blobs['pool5'].data.mean()                
+                print 'sample data of pooled features'
+                print net.blobs['fc6'].data[:2,:]
+                print 'mean value'
+                print net.blobs['fc6'].data.mean()
+            print 'step %d' % step
+            print 'sample data of output of lstm1'
+            print net.blobs['lstm1'].data[0,:,:10]
+            print 'word probs for the first 10'
+            print word_probs[0,:,:10]
         for i, w, loc in zip(range(proposal_n), best_words, pred_location):
             if not pred_captions[i]:
                 pred_captions[i] = [w]
@@ -180,7 +206,7 @@ def im_detect(feature_net, recurrent_net, im, boxes=None):
     # 2. get rois, bbox score and bbox prediction
     # Now:
     # 1. forward pass of one image --> image features and a list of proposals (rois)
-    # 2. for each proposal, do greedy search, which is the same way of DenseCap
+    # 2. for each proposal, do greedy search, which is the same way as DenseCap
     # 
     blobs, im_scales = _get_blobs(im, boxes)
     im_blob = blobs['data']
@@ -277,6 +303,9 @@ def apply_nms(all_boxes, thresh):
 
 def sentence(vocab, vocab_indices):
     sentence = ' '.join([vocab[i] for i in vocab_indices])
+    suffix = ' ' + vocab[0]
+    if sentence.endswith(suffix):
+      sentence = sentence[:-len(suffix)]
     return sentence
 
 def test_net(feature_net, recurrent_net, imdb, max_per_image=100, thresh=0.05, vis=False):
@@ -328,12 +357,12 @@ def test_net(feature_net, recurrent_net, imdb, max_per_image=100, thresh=0.05, v
         pos_boxes_seq = [boxes_seq[idx] for idx in inds]
         pos_boxes = np.array([bs[-1,:] for bs in pos_boxes_seq])
         pos_captions = [captions[idx] for idx in inds]
-        print pos_boxes.shape
-        print pos_scores.shape
+  
         pos_dets = np.hstack((pos_boxes, pos_scores)) \
             .astype(np.float32, copy=False)
         keep = nms(pos_dets, cfg.TEST.NMS)
         pos_dets = pos_dets[keep, :]
+        pos_scores = pos_scores[keep, 0]
         pos_captions = [pos_captions[idx] for idx in keep]
         pos_boxes_seq = [pos_boxes_seq[idx] for idx in keep]
         if vis:
@@ -341,11 +370,12 @@ def test_net(feature_net, recurrent_net, imdb, max_per_image=100, thresh=0.05, v
             vis_detections(imdb.image_path_at(i), im, pos_captions, pos_dets, save_path = os.path.join(output_dir,'vis'))
         all_regions[i] = []
         #follow the format of baseline models routine
-        for cap, box_seq in zip(pos_captions, pos_boxes_seq):
+        for cap, box_seq, prob in zip(pos_captions, pos_boxes_seq, pos_scores):
             #region sizes normalize to [0, 1], follow baseline model routine
             #box_seq[:, [0, 2]] /= im.shape[1]
             #box_seq[:, [1, 3]] /= im.shape[0]
-            anno = {'image_id':i, 'caption':sentence(vocab, cap), 'location_seq': box_seq.tolist(), 'location': box_seq[-1,:].tolist()}
+            anno = {'image_id':i, 'prob': format(prob,'.3f'), 'caption':sentence(vocab, cap), \
+            'location_seq': box_seq.tolist(), 'location': box_seq[-1,:].tolist()}
             all_regions[i].append(anno)
 
         
@@ -376,9 +406,9 @@ def test_net(feature_net, recurrent_net, imdb, max_per_image=100, thresh=0.05, v
         new_gt_regions = []
         
         for reg in regions['regions']:
-            if DEBUG:
-                print 'region info'
-                print reg
+            #if DEBUG:
+                #print 'region info'
+                #print reg
             loc = np.array([reg['x'], reg['y'], reg['x'] + reg['width'], reg['y'] + reg['height']])
             anno = {'image_id':i, 'caption': reg['phrase'], 'location': loc}
             new_gt_regions.append(anno)

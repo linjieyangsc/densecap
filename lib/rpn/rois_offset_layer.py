@@ -6,6 +6,7 @@
 import caffe
 import yaml
 import numpy as np
+import pprint
 import numpy.random as npr
 from fast_rcnn.config import cfg
 from fast_rcnn.bbox_transform import bbox_transform_inv, clip_boxes
@@ -39,6 +40,9 @@ class RoisOffsetLayer(caffe.Layer):
         #copy the adjust rois with time step 0 --> time_steps-1
         for t in xrange(self._time_steps-1):
             rois_prev = top[0].data[t * num_rois : (t + 1) * num_rois, 1:5]
+            # print 'predicted bbox offset at time step %d' % t 
+            # print pred_offset[t,:,:]
+            #pred_offset_step = pred_offset[t,:,:].copy()
             rois_offset = compute_rois_offset(
                     rois_prev, pred_offset[t,:,:], im_info)
             top[0].data[(t + 1) * num_rois : (t + 2) * num_rois, 1:5] = rois_offset
@@ -62,8 +66,10 @@ def compute_rois_offset(rois, offset, im_info=None):
     
     if cfg.TRAIN.BBOX_NORMALIZE_TARGETS_PRECOMPUTED:
         # Optionally normalize targets by a precomputed mean and stdev -- reverse the transformation
-        offset = offset * np.array(cfg.TRAIN.BBOX_NORMALIZE_STDS) + np.array(cfg.TRAIN.BBOX_NORMALIZE_MEANS)
-    rois_offset = bbox_transform_inv(rois, offset)
+        offset_unnorm = offset * np.array(cfg.TRAIN.BBOX_NORMALIZE_STDS) + np.array(cfg.TRAIN.BBOX_NORMALIZE_MEANS)
+    else:
+        offset_unnorm = offset.copy()
+    rois_offset = bbox_transform_inv(rois, offset_unnorm)
     if not im_info is None:         
         rois_offset = clip_boxes(rois_offset, im_info[:2])
     return rois_offset

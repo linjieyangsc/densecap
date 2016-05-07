@@ -248,7 +248,7 @@ def gt_region_merge(region_info, bbox_th=0.7):
   #fast computation of pairwise IoU
   #pick the bbox of last timestep of each sample
   all_bboxes = np.array([x['location'] for x in region_info], dtype = np.float32)# nx4 matrix
-  print all_bboxes.shape
+  #print all_bboxes.shape
   bboxes_coord2 = all_bboxes  
   #area, intersection area, union area
   bbox_areas = (bboxes_coord2[:,2] - bboxes_coord2[:,0]) * \
@@ -287,9 +287,9 @@ def gt_region_merge(region_info, bbox_th=0.7):
     #print merge_group
     bbox_group = bboxes_coord2[merge_group,:].reshape(len(merge_group),4)
     caption_group = [region_info[i]['caption'] for i in merge_group]
-    if len(merge_group) > 1:
-      print 'merged bbox group'
-      print bbox_group
+   # if len(merge_group) > 1:
+    #  print 'merged bbox group'
+    #  print bbox_group
     bbox_mean = np.mean(bbox_group, axis = 0).tolist()
     region_merged.append({'image_id':region_info[max_overlap_id]['image_id'], \
       'captions': caption_group, 'location': bbox_mean})

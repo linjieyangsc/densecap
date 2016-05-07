@@ -1,5 +1,5 @@
 train_net: "models/faster_rcnn_cap/train_cap_two_stage_reg.prototxt"
-base_lr: 0.01
+base_lr: 0.001
 lr_policy: "step"
 gamma: 0.5
 stepsize: 50000

@@ -140,10 +140,10 @@ layer {
   bottom: "pool2"
   top: "conv3_1"
   param {
-    lr_mult: 0.1
+    lr_mult: 0
   }
   param {
-    lr_mult: 0.2
+    lr_mult: 0
   }
   convolution_param {
     num_output: 256
@@ -163,10 +163,10 @@ layer {
   bottom: "conv3_1"
   top: "conv3_2"
   param {
-    lr_mult: 0.1
+    lr_mult: 0
   }
   param {
-    lr_mult: 0.2
+    lr_mult: 0
   }
   convolution_param {
     num_output: 256
@@ -186,10 +186,10 @@ layer {
   bottom: "conv3_2"
   top: "conv3_3"
   param {
-    lr_mult: 0.1
+    lr_mult: 0
   }
   param {
-    lr_mult: 0.2
+    lr_mult: 0
   }
   convolution_param {
     num_output: 256
@@ -220,10 +220,10 @@ layer {
   bottom: "pool3"
   top: "conv4_1"
   param {
-    lr_mult: 0.1
+    lr_mult: 0
   }
   param {
-    lr_mult: 0.2
+    lr_mult: 0
   }
   convolution_param {
     num_output: 512
@@ -243,10 +243,10 @@ layer {
   bottom: "conv4_1"
   top: "conv4_2"
   param {
-    lr_mult: 0.1
+    lr_mult: 0
   }
   param {
-    lr_mult: 0.2
+    lr_mult: 0
   }
   convolution_param {
     num_output: 512
@@ -266,10 +266,10 @@ layer {
   bottom: "conv4_2"
   top: "conv4_3"
   param {
-    lr_mult: 0.1
+    lr_mult: 0
   }
   param {
-    lr_mult: 0.2
+    lr_mult: 0
   }
   convolution_param {
     num_output: 512
@@ -558,6 +558,7 @@ layer {
 }
 
 #retrieve sentences from region ids, newly implemented by Linjie
+# uncomment the last top only making prediction at the last time step
 layer {
   name: "id2sentence"
   type: "Python"
@@ -565,10 +566,11 @@ layer {
   top: "input_sentence"
   top: "target_sentence"
   top: "cont_sentence"
+#  top: "cont_bbox"
   python_param {
     module: 'rpn.sentence_data_layer'
     layer: 'SentenceDataLayer'
-    param_str: "{'time_steps': 11, 'phrase_path': '/home/a-linjieyang/work/caffe/caffe_s2vt/models/dense_cap/h5_data_distill/buffer_100/train_gt_phrases.pkl'}" 
+    param_str: "{'time_steps': 11, 'phrase_path': 'models/dense_cap/h5_data_distill/buffer_100/train_gt_phrases.pkl'}" 
   }
 }
 layer {
@@ -655,8 +657,8 @@ layer {
     num_output: 4
     weight_filler {
       type: "uniform"
-      min: -0.08
-      max: 0.08
+      min: -0.01
+      max: 0.01
     }
     bias_filler {
       type: "constant"
@@ -783,10 +785,10 @@ layer {
 }
 
 layer {
-  name: "cont_tile"
+  name: "cont_bbox_tile"
   type: "Tile"
   bottom: "cont_sentence"
-  top: "cont_tile"
+  top: "cont_bbox_tile"
   tile_param {
     axis: 2
     tiles: 4
@@ -798,8 +800,8 @@ layer {
   type: "SmoothL1Loss"
   bottom: "predict_loc"
   bottom: "bbox_targets_shifted"
-  bottom: "cont_tile"
-  bottom: "cont_tile"
+  bottom: "cont_bbox_tile"
+  bottom: "cont_bbox_tile"
   top: "smooth_l1_loss"
   loss_weight: 0.1
 }
@@ -838,7 +840,7 @@ layer {
   top: "cross_entropy_loss"
   propagate_down: 1
   propagate_down: 0
-  loss_weight: 0.1
+  loss_weight: 1
   loss_param {
     ignore_label: -1
   }

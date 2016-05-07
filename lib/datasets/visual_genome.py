@@ -34,6 +34,8 @@ class visual_genome(imdb):
         vocab_path = os.path.join(self._data_path,'vocabulary.txt')
         with open(vocab_path,'r') as f:
             self._vocabulary_inverted = [line.strip() for line in f]
+        # insert <eos> tag
+        self._vocabulary_inverted.insert(0,'<EOS>')
         self._vocabulary = dict([(w,i) for i,w in enumerate(self._vocabulary_inverted)])
  
         assert os.path.exists(self._data_path), \

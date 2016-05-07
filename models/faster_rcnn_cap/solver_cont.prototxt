@@ -1,5 +1,5 @@
 train_net: "models/faster_rcnn_cap/train_cap.prototxt"
-base_lr: 0.00125
+base_lr: 0.00025
 lr_policy: "step"
 gamma: 0.5
 stepsize: 50000
@@ -11,6 +11,8 @@ weight_decay: 0.0005
 # function
 snapshot: 0
 # We still use the snapshot prefix, though
-snapshot_prefix: "faster_rcnn_cap_cont"
+snapshot_prefix: "faster_rcnn_cap"
+#test_iter: 10
+#test_interval: 100
 iter_size: 2
-clip_gradients: 100
+clip_gradients: 40
