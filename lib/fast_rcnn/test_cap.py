@@ -29,7 +29,7 @@ COCO_EVAL_PATH = '/media/researchshare/linjie/data/MS_COCO/coco-caption/'
 sys.path.append(COCO_EVAL_PATH)
 from pycocoevalcap.vg_eval import VgEvalCap
 eps = 1e-10
-DEBUG=True
+DEBUG=False
 def _get_image_blob(im):
     """Converts an image into a network input.
 
@@ -302,6 +302,7 @@ def apply_nms(all_boxes, thresh):
     return nms_boxes
 
 def sentence(vocab, vocab_indices):
+    # consider <eos> tag with id 0 in vocabulary
     sentence = ' '.join([vocab[i] for i in vocab_indices])
     suffix = ' ' + vocab[0]
     if sentence.endswith(suffix):
@@ -324,8 +325,9 @@ def test_net(feature_net, recurrent_net, imdb, max_per_image=100, thresh=0.05, v
 
     if not cfg.TEST.HAS_RPN:
         roidb = imdb.roidb
-    #read vocabulary
-    vocab = imdb.get_vocabulary()
+    #read vocabulary  & add <eos> tag
+    vocab = list(imdb.get_vocabulary()).insert(0, '<EOS>')
+   
 
     for i in xrange(num_images):
         # filter out any ground truth boxes

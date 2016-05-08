@@ -106,6 +106,12 @@ class SolverWrapper(object):
 
                 predict_scores = self.solver.net.blobs['predict'].data
                 predict_labels = np.argmax(predict_scores, axis = 2)
+                cont_sentence = self.solver.net.blobs['cont_sentence'].data
+                print 'cont sentence sample'
+                print cont_sentence[:,:2]
+                input_sentence = self.solver.net.blobs['input_sentence'].data
+                print 'input labels sample'
+                print input_sentence[:,:2] 
                 print 'predicted labels sample'
                 print predict_labels[:,:2]
                 target_labels = self.solver.net.blobs['target_sentence'].data
