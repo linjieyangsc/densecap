@@ -326,8 +326,8 @@ def test_net(feature_net, recurrent_net, imdb, max_per_image=100, thresh=0.05, v
     if not cfg.TEST.HAS_RPN:
         roidb = imdb.roidb
     #read vocabulary  & add <eos> tag
-    vocab = list(imdb.get_vocabulary()).insert(0, '<EOS>')
-   
+    vocab = list(imdb.get_vocabulary())
+    vocab.insert(0, '<EOS>')
 
     for i in xrange(num_images):
         # filter out any ground truth boxes
