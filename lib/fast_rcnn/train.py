@@ -96,6 +96,7 @@ class SolverWrapper(object):
         """Network training loop."""
         last_snapshot_iter = -1
         timer = Timer()
+        model_paths = []
         while self.solver.iter < max_iters:
             # Make one SGD update
             timer.tic()
