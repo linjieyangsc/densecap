@@ -255,29 +255,20 @@ def im_detect(feature_net, recurrent_net, im, boxes=None):
    
     return scores, pred_boxes_seq, captions
 
-def vis_detections(im_path, im, captions, dets, thresh=0.3, save_path ='output/vis/'):
+def vis_detections(im_path, im, captions, dets, thresh=0.3, save_path='vis'):
     """Visual debugging of detections by saving images with detected bboxes."""
-    import matplotlib.pyplot as plt
-    im = im[:, :, (2, 1, 0)]
+    if not os.path.exists(save_path):
+                os.makedirs(save_path)
     for i in xrange(np.minimum(10, dets.shape[0])):
         bbox = dets[i, :4]
         score = dets[i, -1]
         caption = captions[i]
         if score > thresh:
-            plt.cla()
-            plt.imshow(im)
-            plt.gca().add_patch(
-                plt.Rectangle((bbox[0], bbox[1]),
-                              bbox[2] - bbox[0],
-                              bbox[3] - bbox[1], fill=False,
-                              edgecolor='g', linewidth=3)
-                )
-            plt.title('{}  {:.3f}'.format(caption, score))
-            #plt.show()
+            im_new = np.copy(im)
             im_name = im_path.split('/')[-1][:-4]
-            if not os.path.exists(save_path):
-                os.makedirs(save_path)
-            plt.savefig(save_path + im_name + caption + '.jpg')
+            cv2.rectangle(im_new, (bbox[0],bbox[1]), (bbox[2],bbox[3]), (255,0,0), 2)
+            cv2.imwrite('%s/%s_%s_%.2f.jpg' % (save_path, im_name, caption, score), im_new)
+            
 
 def apply_nms(all_boxes, thresh):
     """Apply non-maximum suppression to all predicted boxes output by the
@@ -309,7 +300,7 @@ def sentence(vocab, vocab_indices):
       sentence = sentence[:-len(suffix)]
     return sentence
 
-def test_net(feature_net, recurrent_net, imdb, max_per_image=100, thresh=0.05, vis=False):
+def test_net(feature_net, recurrent_net, imdb, max_per_image=100, thresh=0.01, vis=True):
     """Test a Fast R-CNN network on an image database."""
     num_images = len(imdb.image_index)
     if DEBUG:
@@ -365,7 +356,7 @@ def test_net(feature_net, recurrent_net, imdb, max_per_image=100, thresh=0.05, v
         keep = nms(pos_dets, cfg.TEST.NMS)
         pos_dets = pos_dets[keep, :]
         pos_scores = pos_scores[keep, 0]
-        pos_captions = [pos_captions[idx] for idx in keep]
+        pos_captions = [sentence(vocab, pos_captions[idx]) for idx in keep]
         pos_boxes_seq = [pos_boxes_seq[idx] for idx in keep]
         if vis:
             #TODO(Linjie): display location sequence
@@ -376,7 +367,7 @@ def test_net(feature_net, recurrent_net, imdb, max_per_image=100, thresh=0.05, v
             #region sizes normalize to [0, 1], follow baseline model routine
             #box_seq[:, [0, 2]] /= im.shape[1]
             #box_seq[:, [1, 3]] /= im.shape[0]
-            anno = {'image_id':i, 'prob': format(prob,'.3f'), 'caption':sentence(vocab, cap), \
+            anno = {'image_id':i, 'prob': format(prob,'.3f'), 'caption':cap, \
             'location_seq': box_seq.tolist(), 'location': box_seq[-1,:].tolist()}
             all_regions[i].append(anno)
 

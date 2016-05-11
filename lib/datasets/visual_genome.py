@@ -11,6 +11,7 @@ import subprocess
 import uuid
 import json
 from fast_rcnn.config import cfg
+DEBUG = False
 UNK_IDENTIFIER='<unk>'
 DEVKIT_PATH='models/dense_cap/h5_data_distill/buffer_100'
 class visual_genome(imdb):
@@ -80,17 +81,24 @@ class visual_genome(imdb):
         """
         cache_file = os.path.join(self._data_path, self._image_set + '_gt_roidb.pkl')
         cache_file_phrases = os.path.join(self._data_path, self._image_set + '_gt_phrases.pkl')
-        if os.path.exists(cache_file):
-            with open(cache_file, 'rb') as fid:
-                roidb = cPickle.load(fid)
-            print '{} gt roidb loaded from {}'.format(self._image_set, cache_file)
-            return roidb
+        # if os.path.exists(cache_file):
+        #     with open(cache_file, 'rb') as fid:
+        #         roidb = cPickle.load(fid)
+        #     print '{} gt roidb loaded from {}'.format(self._image_set, cache_file)
+        #     return roidb
 
         gt_roidb = [self._load_vg_annotation(index) for index in self._image_index]
         gt_phrases = {}
         for k,v in self._gt_regions.iteritems():
             for reg in v['regions']:
                 gt_phrases[reg['id']] = self._line_to_stream(reg['phrase_tokens'])
+
+                if DEBUG:
+                #CHECK consistency
+                    for wi, w in zip(gt_phrases[reg['id']], reg['phrase_tokens']):
+                        vocab_w = self._vocabulary_inverted[wi-1]
+                        print vocab_w,w
+                        assert( vocab_w == UNK_IDENTIFIER or vocab_w == w)
         with open(cache_file, 'wb') as fid:
             cPickle.dump(gt_roidb, fid, cPickle.HIGHEST_PROTOCOL)
         with open(cache_file_phrases, 'wb') as fid:
