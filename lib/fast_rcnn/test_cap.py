@@ -392,12 +392,13 @@ def test_net(feature_net, recurrent_net, imdb, max_per_image=100, thresh=0.01, v
    
    
     
-    gt_regions = imdb.get_gt_regions() # is a list
+    #gt_regions = imdb.get_gt_regions() # is a list
     gt_regions_merged = [None] * num_images
     #transform gt_regions into the baseline model routine
-    for i,regions in enumerate(gt_regions):
+    #for i,regions in enumerate(gt_regions):
+    for i, image_index in enumerate(imdb.image_index):
         new_gt_regions = []
-        
+        regions = imdb.get_gt_regions_index(image_index)
         for reg in regions['regions']:
             #if DEBUG:
                 #print 'region info'

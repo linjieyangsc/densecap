@@ -4,7 +4,7 @@
 # DATASET is either pascal_voc or coco.
 #
 # Example:
-# ./models/faster_rcnn_cap/faster_rcnn_end2end.sh 1 visual_genome
+# ./models/faster_rcnn_cap/faster_rcnn_end2end.sh 1 visual_genome --set TRAIN.SCALES "[720]"
 
 set -x
 set -e
@@ -40,7 +40,7 @@ case $DATASET in
     TRAIN_IMDB="vg_train"
     TEST_IMDB="vg_val"
     PT_DIR="faster_rcnn_cap"
-    ITERS=300000
+    ITERS=500000
     ;;
   *)
     echo "No dataset given"
@@ -48,7 +48,8 @@ case $DATASET in
     ;;
 esac
 
-time ./lib/tools/train_net.py --gpu ${GPU_ID} \
+GLOG_logtostderr=1
+./lib/tools/train_net.py --gpu ${GPU_ID} \
   --solver models/${PT_DIR}/solver.prototxt \
   --weights models/vggnet/VGG_ILSVRC_16_layers.caffemodel \
   --imdb ${TRAIN_IMDB} \

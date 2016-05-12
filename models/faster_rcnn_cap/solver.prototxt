@@ -13,5 +13,5 @@ snapshot: 0
 # We still use the snapshot prefix, though
 snapshot_prefix: "faster_rcnn_cap"
 iter_size: 2
-clip_gradients: 50
+clip_gradients: 80
 #debug_info: true

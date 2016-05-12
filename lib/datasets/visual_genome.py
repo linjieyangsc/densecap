@@ -69,7 +69,8 @@ class visual_genome(imdb):
         
     def get_gt_regions(self):
         return [v for k,v in self._gt_regions.iteritems()]
-
+    def get_gt_regions_index(self, index):
+        return self._gt_regions[index]
     def get_vocabulary(self):
         return self._vocabulary_inverted
 

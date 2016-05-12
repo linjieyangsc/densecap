@@ -5,7 +5,7 @@
 #
 # Example:
 # ./experiments/scripts/fast_rcnn.sh 0 VGG_CNN_M_1024 pascal_voc \
-#   --set EXP_DIR foobar RNG_SEED 42 TRAIN.SCALES "[400, 500, 600, 700]"
+#   --set TRAIN.SCALES "[400, 500, 600, 700]"
 
 set -x
 set -e
