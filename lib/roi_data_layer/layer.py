@@ -138,11 +138,12 @@ class RoIDataLayer(caffe.Layer):
 
         print 'RoiDataLayer: name_to_top:', self._name_to_top_map
         assert len(top) == len(self._name_to_top_map)
+        
 
     def forward(self, bottom, top):
         """Get blobs and copy them into this layer's top blob vector."""
         blobs = self._get_next_minibatch()
-
+        
         for blob_name, blob in blobs.iteritems():
             top_ind = self._name_to_top_map[blob_name]
             # Reshape net's input blobs
@@ -158,6 +159,7 @@ class RoIDataLayer(caffe.Layer):
         """Reshaping happens during the call to forward."""
         pass
 
+    
 class BlobFetcher(Process):
     """Experimental class for prefetching blobs in a separate process."""
     def __init__(self, queue, roidb, num_classes):

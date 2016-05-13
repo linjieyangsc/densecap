@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-GPU_ID=4
+GPU_ID=1
 WEIGHTS=\
 ./models/vggnet/VGG_ILSVRC_16_layers.caffemodel
 

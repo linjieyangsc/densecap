@@ -12,6 +12,7 @@ import uuid
 import json
 from fast_rcnn.config import cfg
 DEBUG = False
+USE_CACHE = True
 UNK_IDENTIFIER='<unk>'
 DEVKIT_PATH='models/dense_cap/h5_data_distill/buffer_100'
 class visual_genome(imdb):
@@ -82,11 +83,11 @@ class visual_genome(imdb):
         """
         cache_file = os.path.join(self._data_path, self._image_set + '_gt_roidb.pkl')
         cache_file_phrases = os.path.join(self._data_path, self._image_set + '_gt_phrases.pkl')
-        # if os.path.exists(cache_file):
-        #     with open(cache_file, 'rb') as fid:
-        #         roidb = cPickle.load(fid)
-        #     print '{} gt roidb loaded from {}'.format(self._image_set, cache_file)
-        #     return roidb
+        if os.path.exists(cache_file) and USE_CACHE:
+            with open(cache_file, 'rb') as fid:
+                roidb = cPickle.load(fid)
+            print '{} gt roidb loaded from {}'.format(self._image_set, cache_file)
+            return roidb
 
         gt_roidb = [self._load_vg_annotation(index) for index in self._image_index]
         gt_phrases = {}

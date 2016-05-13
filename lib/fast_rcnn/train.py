@@ -97,43 +97,81 @@ class SolverWrapper(object):
         last_snapshot_iter = -1
         timer = Timer()
         model_paths = []
+        if DEBUG:
+            import cPickle
+
+            phrase_path = 'models/dense_cap/h5_data_distill/buffer_100/train_gt_phrases.pkl'
+            self._all_phrases = cPickle.load(open(phrase_path,'rb'))
+            vocab_path = 'models/dense_cap/h5_data_distill/buffer_100/vocabulary.txt'
+            with open(vocab_path,'r') as f:
+                self._vocab = [line.strip() for line in f]
+            self._vocab.insert(0, '<EOS>')
         while self.solver.iter < max_iters:
             # Make one SGD update
             timer.tic()
             self.solver.step(1)
             timer.toc()
             if DEBUG:
+                image = self.solver.net.blobs['data'].data[0,:,:,:].transpose(1,2,0).copy()
+                print 'iter %d' % self.solver.iter
+                print 'shape of image'
+                print image.shape
+                im_info = self.solver.net.blobs['im_info'].data
+                print 'im info'
+                print im_info
+                #gt_boxes = self.solver.net.blobs['gt_boxes'].data
+                rois = self.solver.net.blobs['rois'].data.copy()
+                labels = self.solver.net.blobs['labels'].data.copy()
+                #check sentence
 
-                predict_scores = self.solver.net.blobs['predict'].data
-                predict_labels = np.argmax(predict_scores, axis = 2)
-                cont_sentence = self.solver.net.blobs['cont_sentence'].data
-                print 'cont sentence sample'
-                print cont_sentence[:,:2]
-                input_sentence = self.solver.net.blobs['input_sentence'].data
-                print 'input labels sample'
-                print input_sentence[:,:2] 
-                print 'predicted labels sample'
-                print predict_labels[:,:2]
-                target_labels = self.solver.net.blobs['target_sentence'].data
-                print 'target labels sample'
-                print target_labels[:,:2] 
-                predict_probs = softmax(predict_scores)
-                predict_logprobs = np.log(predict_probs)
-                target_probs = np.zeros_like(target_labels)
-                loss = 0
-                time_steps = target_labels.shape[0]
-                samples = target_labels.shape[1]
-                for i in xrange(time_steps):
-                    for j in xrange(samples):
-                        if target_labels[i,j] > -1:
-                            loss += predict_logprobs[i,j,target_labels[i,j]]
-                            target_probs[i,j] = predict_probs[i,j,target_labels[i,j]]
-                loss /= np.sum(target_labels > -1)
-                print 'target probs sample'
-                print target_probs[:,:2] 
-                print 'per word loss: %.3f' % loss
-                word_accuracy = np.sum(predict_labels == target_labels)/np.sum(target_labels > -1)
-                print 'word accuracy: %.3f' % word_accuracy
+                sentences = self.solver.net.blobs['target_sentence'].data.copy()
+                print 'shape of sentences'
+                print sentences.shape
+                for i in xrange(sentences.shape[1]):
+                    
+                    region_id = labels[i]
+                    if region_id > 0:
+                        sentence = sentences[:,i]
+                        sentence = sentence[:np.where(sentence==0)[0][0]]
+                        assert(np.all(self._all_phrases[region_id] == np.array(sentence)))
+                        print 'checked %d' % i
+                    else:
+                        assert(sentences[0,i] == -1)
+
+                #rois_labels = np.hstack((rois[:,1:],labels[:,np.newaxis]))
+                #self.vis_regions(image, rois_labels, self.solver.iter)
+                if self.solver.iter > 5: 
+                    exit()
+                # predict_scores = self.solver.net.blobs['predict'].data
+                # predict_labels = np.argmax(predict_scores, axis = 2)
+                # cont_sentence = self.solver.net.blobs['cont_sentence'].data
+                # print 'cont sentence sample'
+                # print cont_sentence[:,:2]
+                # input_sentence = self.solver.net.blobs['input_sentence'].data
+                # print 'input labels sample'
+                # print input_sentence[:,:2] 
+                # print 'predicted labels sample'
+                # print predict_labels[:,:2]
+                # target_labels = self.solver.net.blobs['target_sentence'].data
+                # print 'target labels sample'
+                # print target_labels[:,:2] 
+                # predict_probs = softmax(predict_scores)
+                # predict_logprobs = np.log(predict_probs)
+                # target_probs = np.zeros_like(target_labels)
+                # loss = 0
+                # time_steps = target_labels.shape[0]
+                # samples = target_labels.shape[1]
+                # for i in xrange(time_steps):
+                #     for j in xrange(samples):
+                #         if target_labels[i,j] > -1:
+                #             loss += predict_logprobs[i,j,target_labels[i,j]]
+                #             target_probs[i,j] = predict_probs[i,j,target_labels[i,j]]
+                # loss /= np.sum(target_labels > -1)
+                # print 'target probs sample'
+                # print target_probs[:,:2] 
+                # print 'per word loss: %.3f' % loss
+                # word_accuracy = np.sum(predict_labels == target_labels)/np.sum(target_labels > -1)
+                # print 'word accuracy: %.3f' % word_accuracy
             if self.solver.iter % (10 * self.solver_param.display) == 0:
                 print 'speed: {:.3f}s / iter'.format(timer.average_time)
             #if self.solver_param.test_interval>0 and self.solver.iter % self.solver_param.test_interval == 0:
@@ -145,6 +183,30 @@ class SolverWrapper(object):
         if last_snapshot_iter != self.solver.iter:
             model_paths.append(self.snapshot())
         return model_paths
+    
+    def vis_regions(self, im, regions, iter_n, save_path='debug'):
+        """Visual debugging of detections by saving images with detected bboxes."""
+        import cv2
+        if not os.path.exists(save_path):
+                    os.makedirs(save_path)
+        mean_values = np.array([[[ 102.9801,  115.9465,  122.7717]]])
+        im = im + mean_values #offset to original values
+
+
+        for i in xrange(len(regions)):
+            bbox = regions[i, :4]
+            region_id = regions[i,4]
+            if region_id == 0:
+                continue
+            caption = self.sentence(self._all_phrases[region_id])
+
+            im_new = np.copy(im)     
+            cv2.rectangle(im_new, (bbox[0],bbox[1]), (bbox[2],bbox[3]), (0,0,255), 2)
+            cv2.imwrite('%s/%d_%s.jpg' % (save_path, iter_n, caption), im_new)
+    def sentence(self, vocab_indices):
+        # consider <eos> tag with id 0 in vocabulary
+        sentence = ' '.join([self._vocab[i] for i in vocab_indices])
+        return sentence
 
 def get_training_roidb(imdb):
     """Returns a roidb (Region of Interest database) for use in training."""
