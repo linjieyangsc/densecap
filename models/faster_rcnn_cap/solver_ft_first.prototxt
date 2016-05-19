@@ -1,8 +1,8 @@
-train_net: "models/faster_rcnn_cap/train_cap_anchor12.prototxt"
+train_net: "models/faster_rcnn_cap/train_cap_ft_first.prototxt"
 base_lr: 0.001
 lr_policy: "step"
 gamma: 0.5
-stepsize: 100000
+stepsize: 50000
 display: 20
 average_loss: 100
 momentum: 0.98
@@ -11,6 +11,6 @@ weight_decay: 0.000
 # function
 snapshot: 0
 # We still use the snapshot prefix, though
-snapshot_prefix: "faster_rcnn_cap_anchor12"
+snapshot_prefix: "faster_rcnn_cap_ft_first"
 clip_gradients: 20
 #debug_info: true

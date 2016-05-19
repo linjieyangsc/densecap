@@ -428,13 +428,7 @@ layer {
   }
 }
 
-layer {
-  name: "silence"
-  type: "Silence"
-  bottom: "rpn_bbox_targets"
-  bottom: "rpn_bbox_inside_weights"
-  bottom: "rpn_bbox_outside_weights"
-}
+
 
 layer {
   name: "rpn_loss_cls"
@@ -444,7 +438,7 @@ layer {
   propagate_down: 1
   propagate_down: 0
   top: "rpn_cls_loss"
-  loss_weight: 0.1
+  loss_weight: 1
   loss_param {
     ignore_label: -1
     normalize: true
@@ -510,6 +504,14 @@ layer {
   }
 }
 
+layer {
+  name: "silence"
+  type: "Silence"
+  bottom: "rpn_bbox_targets"
+  bottom: "rpn_bbox_inside_weights"
+  bottom: "rpn_bbox_outside_weights"
+  bottom: "bbox_targets"
+}
 #========= RCNN ============
 
 layer {
@@ -574,11 +576,10 @@ layer {
   top: "input_sentence"
   top: "target_sentence"
   top: "cont_sentence"
-  top: "cont_bbox"
   python_param {
     module: 'rpn.sentence_data_layer'
     layer: 'SentenceDataLayer'
-    param_str: "{'time_steps': 12, 'phrase_path': 'models/dense_cap/h5_data_distill/buffer_100/train_gt_phrases.pkl','mode':'concat'}" 
+    param_str: "{'time_steps': 12, 'phrase_path': 'models/dense_cap/h5_data_distill/buffer_100/train_gt_phrases.pkl', 'mode':'concat'}" 
   }
 }
 layer {
@@ -601,6 +602,7 @@ layer {
     }
   }
 }
+
 layer{
   name: "fc7_reshape"
   type: "Reshape"
@@ -625,7 +627,6 @@ layer{
   }
 }
 
-
 layer {
   name: "lstm1"
   type: "LSTM"
@@ -648,98 +649,7 @@ layer {
   }
 }
 
-layer {
-  name: "lstm2"
-  type: "LSTM"
-  bottom: "im_concat_words"
-  bottom: "cont_sentence"
-  top: "lstm2"
-  propagate_down: 1
-  propagate_down: 0
-  recurrent_param {
-    num_output: 1000
-    weight_filler {
-      type: "uniform"
-      min: -0.08
-      max: 0.08
-    }
-    bias_filler {
-      type: "constant"
-      value: 0
-    }
-  }
-}
 
-layer {
-  name: "predict_loc"
-  type: "InnerProduct"
-  bottom: "lstm2"
-  top: "predict_loc"
-  param {
-    lr_mult: 1
-    decay_mult: 1
-  }
-  param {
-    lr_mult: 2
-    decay_mult: 0
-  }
-  inner_product_param {
-    num_output: 4
-    weight_filler {
-      type: "uniform"
-      min: -0.08
-      max: 0.08
-    }
-    bias_filler {
-      type: "constant"
-      value: 0
-    }
-    axis: 2
-  }
-} 
-layer {
-  name: "cont_tile"
-  type: "Tile"
-  bottom: "cont_bbox"
-  top: "cont_tile"
-  tile_param {
-    axis: 2
-    tiles: 4
-  }
-}
-layer {
-  name: "bbox_tile"
-  type: "Tile"
-  bottom: "bbox_targets"
-  top: "bbox_tile"
-  tile_param {
-    axis: 0
-    tiles: 12
-  }
-}
-layer{
-  name: "bbox_tile_reshape"
-  type: "Reshape"
-  bottom: "bbox_tile"
-  top: "bbox_tile_reshape"
-  reshape_param {
-    shape {
-      dim: 12
-      dim: -1
-      dim: 4
-    }
-  }
-}
-layer {
-  name: "smooth_l1_loss"
-  type: "SmoothL1Loss"
-  bottom: "predict_loc"
-  bottom: "bbox_tile_reshape"
-  bottom: "cont_tile"
-  bottom: "cont_tile" 
-  top: "smooth_l1_loss"
-  loss_weight: 0.1
-}
 layer {
   name: "predict"
   type: "InnerProduct"

@@ -3,6 +3,9 @@
 # ./experiments/scripts/faster_rcnn_end2end.sh GPU DATASET [options args to {train,test}_net.py]
 # DATASET is either pascal_voc or coco.
 #
+# Example:
+# ./models/faster_rcnn_cap/faster_rcnn_end2end.sh 1 visual_genome --set TRAIN.SCALES "[720]"
+
 set -x
 set -e
 
@@ -45,8 +48,9 @@ case $DATASET in
     ;;
 esac
 
-time ./lib/tools/train_net.py --gpu ${GPU_ID} \
-  --solver models/${PT_DIR}/solver_bbox_last.prototxt \
+GLOG_logtostderr=1
+./lib/tools/train_net.py --gpu ${GPU_ID} \
+  --solver models/${PT_DIR}/solver_one_lstm.prototxt \
   --weights models/vggnet/VGG_ILSVRC_16_layers.caffemodel \
   --imdb ${TRAIN_IMDB} \
   --iters ${ITERS} \

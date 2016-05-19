@@ -1,16 +1,17 @@
-train_net: "models/faster_rcnn_cap/train_cap_anchor12.prototxt"
+train_net: "models/faster_rcnn_cap/train_cap_one_lstm.prototxt"
 base_lr: 0.001
 lr_policy: "step"
 gamma: 0.5
-stepsize: 100000
+stepsize: 50000
 display: 20
 average_loss: 100
-momentum: 0.98
-weight_decay: 0.000
+momentum: 0.9
+weight_decay: 0.0005
 # We disable standard caffe solver snapshotting and implement our own snapshot
 # function
 snapshot: 0
 # We still use the snapshot prefix, though
-snapshot_prefix: "faster_rcnn_cap_anchor12"
-clip_gradients: 20
+snapshot_prefix: "faster_rcnn_cap"
+iter_size: 2
+clip_gradients: 50
 #debug_info: true

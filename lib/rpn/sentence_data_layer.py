@@ -20,9 +20,11 @@ class SentenceDataLayer(caffe.Layer):
 
         # parse the layer parameter string, which must be valid YAML
         layer_params = yaml.load(self.param_str_)
-
+        all_modes = ('repeat','concat')
         self._time_steps = layer_params['time_steps']
         phrase_path = layer_params['phrase_path']
+        self._mode = layer_params['mode'] if 'mode' in layer_params else 'repeat'
+        assert (self._mode in all_modes)
         self._all_phrases = cPickle.load(open(phrase_path,'rb'))
         if DEBUG:
             all_len = [len(stream) for k,stream in self._all_phrases.iteritems()]
@@ -34,7 +36,9 @@ class SentenceDataLayer(caffe.Layer):
         
         for i in xrange(len(top)):
          
-            top[i].reshape(self._time_steps,num_regions)
+            top[i].reshape(self._time_steps, num_regions)
+            if self._mode == 'concat':
+                top[0].reshape(self._time_steps-1, num_regions)
         
 
 
@@ -43,7 +47,10 @@ class SentenceDataLayer(caffe.Layer):
         assert(len(bottom) == 1) #only one bottom: labels (region ids)
         num_regions = bottom[0].data.shape[0]
         #print num_regions
-        top[0].reshape(self._time_steps,num_regions)
+        if self._mode == 'repeat':
+            top[0].reshape(self._time_steps,num_regions)
+        else:
+            top[0].reshape(self._time_steps-1,num_regions)
         top[1].reshape(self._time_steps,num_regions)
         top[2].reshape(self._time_steps,num_regions)
         if (len(top) > 3):
@@ -73,25 +80,52 @@ class SentenceDataLayer(caffe.Layer):
     
 
     def _get_streams(self, region_id):
-        if region_id > 0:
-            stream = self._all_phrases[region_id]
-            pad = self._time_steps - (len(stream) + 1) 
-            out = {}
-            out['cont_sentence'] = [0] + [1] * len(stream) + [0] * pad
-            out['input_sentence'] = [0] + stream + [-1] * pad
-            out['target_sentence'] = stream + [0] + [-1] * pad
-            # only make prediction at the last time step for bbox
-            out['cont_bbox'] = [0] * len(stream) + [1] + [0] * pad
-            #print "target coord length %d" % len(out['target_coord'])
-            
-            for key, val in out.iteritems():
-                if len(val) > self._time_steps:                    
-                    out[key] = val[:self._time_steps]
+
+        if self._mode =='repeat':
+            # Image feature repeated at each time step
+            if region_id > 0:
+                stream = self._all_phrases[region_id]
+                pad = self._time_steps - (len(stream) + 1) 
+                out = {}
+                out['cont_sentence'] = [0] + [1] * len(stream) + [0] * pad
+                out['input_sentence'] = [0] + stream + [-1] * pad
+                out['target_sentence'] = stream + [0] + [-1] * pad
+                # only make prediction at the last time step for bbox
+                out['cont_bbox'] = [0] * len(stream) + [1] + [0] * pad
+                #print "target coord length %d" % len(out['target_coord'])
+                
+                for key, val in out.iteritems():
+                    if len(val) > self._time_steps:                    
+                        out[key] = val[:self._time_steps]
+            else:
+                # negative sample, no phrase related
+                out = {}
+                out['cont_sentence'] = [0] * self._time_steps
+                out['input_sentence'] = [-1] * self._time_steps
+                out['target_sentence'] = [-1] * self._time_steps
+                out['cont_bbox'] = [0] * self._time_steps
+
         else:
-            # negative sample, no phrase related
-            out = {}
-            out['cont_sentence'] = [0] * self._time_steps
-            out['input_sentence'] = [-1] * self._time_steps
-            out['target_sentence'] = [-1] * self._time_steps
-            out['cont_bbox'] = [0] * self._time_steps
+            # Image feature concated to the first time step
+            if region_id > 0:
+                stream = self._all_phrases[region_id]
+                pad = self._time_steps - (len(stream) + 2) 
+                out = {}
+                out['cont_sentence'] = [0] + [1] * (len(stream) + 1) + [0] * pad
+                out['input_sentence'] = [0] + stream + [-1] * pad
+                out['target_sentence'] = [-1] + stream + [0] + [-1] * pad
+                # only make prediction at the last time step for bbox
+                out['cont_bbox'] = [0] * (len(stream) + 1) + [1] + [0] * pad
+                #print "target coord length %d" % len(out['target_coord'])
+                
+                for key, val in out.iteritems():
+                    if len(val) > self._time_steps:                    
+                        out[key] = val[:self._time_steps]
+            else:
+                # negative sample, no phrase related
+                out = {}
+                out['cont_sentence'] = [0] * self._time_steps
+                out['input_sentence'] = [-1] * (self._time_steps - 1)
+                out['target_sentence'] = [-1] * self._time_steps
+                out['cont_bbox'] = [0] * self._time_steps
         return out

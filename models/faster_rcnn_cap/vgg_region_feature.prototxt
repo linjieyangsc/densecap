@@ -1,16 +1,18 @@
-name: "VGG_ILSVRC_16_layers"
-layer {
-  name: 'input-data'
-  type: 'Python'
-  top: 'data'
-  top: 'im_info'
-  top: 'gt_boxes'
-  python_param {
-    module: 'roi_data_layer.layer'
-    layer: 'RoIDataLayer'
-    param_str: "'num_classes': 2"
-  }
+ name: "VGG_ILSVRC_16_layers"
+input: "data"
+input_shape {
+  dim: 1
+  dim: 3
+  dim: 224
+  dim: 224
 }
+
+input: "im_info"
+input_shape {
+  dim: 1
+  dim: 3
+}
+
 
 layer {
   name: "conv1_1"
@@ -140,10 +142,10 @@ layer {
   bottom: "pool2"
   top: "conv3_1"
   param {
-    lr_mult: 0
+    lr_mult: 0.1
   }
   param {
-    lr_mult: 0
+    lr_mult: 0.2
   }
   convolution_param {
     num_output: 256
@@ -163,10 +165,10 @@ layer {
   bottom: "conv3_1"
   top: "conv3_2"
   param {
-    lr_mult: 0
+    lr_mult: 0.1
   }
   param {
-    lr_mult: 0
+    lr_mult: 0.2
   }
   convolution_param {
     num_output: 256
@@ -186,10 +188,10 @@ layer {
   bottom: "conv3_2"
   top: "conv3_3"
   param {
-    lr_mult: 0
+    lr_mult: 0.1
   }
   param {
-    lr_mult: 0
+    lr_mult: 0.2
   }
   convolution_param {
     num_output: 256
@@ -220,10 +222,10 @@ layer {
   bottom: "pool3"
   top: "conv4_1"
   param {
-    lr_mult: 0
+    lr_mult: 0.1
   }
   param {
-    lr_mult: 0
+    lr_mult: 0.2
   }
   convolution_param {
     num_output: 512
@@ -243,10 +245,10 @@ layer {
   bottom: "conv4_1"
   top: "conv4_2"
   param {
-    lr_mult: 0
+    lr_mult: 0.1
   }
   param {
-    lr_mult: 0
+    lr_mult: 0.2
   }
   convolution_param {
     num_output: 512
@@ -266,10 +268,10 @@ layer {
   bottom: "conv4_2"
   top: "conv4_3"
   param {
-    lr_mult: 0
+    lr_mult: 0.1
   }
   param {
-    lr_mult: 0
+    lr_mult: 0.2
   }
   convolution_param {
     num_output: 512
@@ -300,10 +302,10 @@ layer {
   bottom: "pool4"
   top: "conv5_1"
   param {
-    lr_mult: 0
+    lr_mult: 0.1
   }
   param {
-    lr_mult: 0
+    lr_mult: 0.2
   }
   convolution_param {
     num_output: 512
@@ -323,10 +325,10 @@ layer {
   bottom: "conv5_1"
   top: "conv5_2"
   param {
-    lr_mult: 0
+    lr_mult: 0.1
   }
   param {
-    lr_mult: 0
+    lr_mult: 0.2
   }
   convolution_param {
     num_output: 512
@@ -346,10 +348,10 @@ layer {
   bottom: "conv5_2"
   top: "conv5_3"
   param {
-    lr_mult: 0
+    lr_mult: 0.1
   }
   param {
-    lr_mult: 0
+    lr_mult: 0.2
   }
   convolution_param {
     num_output: 512
@@ -387,6 +389,7 @@ layer {
   top: "rpn/output"
 }
 
+
 layer {
   name: "rpn_cls_score"
   type: "Convolution"
@@ -410,46 +413,7 @@ layer {
    reshape_param { shape { dim: 0 dim: 2 dim: -1 dim: 0 } }
 }
 
-layer {
-  name: 'rpn-data'
-  type: 'Python'
-  bottom: 'rpn_cls_score'
-  bottom: 'gt_boxes'
-  bottom: 'im_info'
-  bottom: 'data'
-  top: 'rpn_labels'
-  top: 'rpn_bbox_targets'
-  top: 'rpn_bbox_inside_weights'
-  top: 'rpn_bbox_outside_weights'
-  python_param {
-    module: 'rpn.anchor_target_layer'
-    layer: 'AnchorTargetLayer'
-    param_str: "'feat_stride': 16"
-  }
-}
 
-layer {
-  name: "silence"
-  type: "Silence"
-  bottom: "rpn_bbox_targets"
-  bottom: "rpn_bbox_inside_weights"
-  bottom: "rpn_bbox_outside_weights"
-}
-
-layer {
-  name: "rpn_loss_cls"
-  type: "SoftmaxWithLoss"
-  bottom: "rpn_cls_score_reshape"
-  bottom: "rpn_labels"
-  propagate_down: 1
-  propagate_down: 0
-  top: "rpn_cls_loss"
-  loss_weight: 0.1
-  loss_param {
-    ignore_label: -1
-    normalize: true
-  }
-}
 
 #========= RoI Proposal ============
 
@@ -473,8 +437,8 @@ layer {
   type: 'Python'
   bottom: 'rpn_cls_prob_reshape'
   bottom: 'im_info'
-  top: 'rpn_rois'
-#  top: 'rpn_scores'
+  top: 'rois'
+  top: 'rpn_scores'
   python_param {
     module: 'rpn.proposal_layer'
     layer: 'ProposalLayer'
@@ -482,35 +446,6 @@ layer {
   }
 }
 
-#layer {
-#  name: 'debug-data'
-#  type: 'Python'
-#  bottom: 'data'
-#  bottom: 'rpn_rois'
-#  bottom: 'rpn_scores'
-#  python_param {
-#    module: 'rpn.debug_layer'
-#    layer: 'RPNDebugLayer'
-#  }
-#}
-
-#single class proposal sampling layer, adapted from rpn.proposal_target_layer
-layer {
-  name: 'roi-data'
-  type: 'Python'
-  bottom: 'rpn_rois'
-  bottom: 'gt_boxes'
-  top: 'rois'
-  top: 'labels'
-  top: 'bbox_targets'
-  python_param {
-    module: 'rpn.proposal_target_single_class_layer'
-    layer: 'ProposalTargetLayer'
-    param_str: "" 
-  }
-}
-
-#========= RCNN ============
 
 layer {
   name: "roi_pool5"
@@ -566,46 +501,12 @@ layer {
     }
   }
 }
-#retrieve sentences from region ids, newly implemented by Linjie
-layer {
-  name: "id2sentence"
-  type: "Python"
-  bottom: "labels"
-  top: "input_sentence"
-  top: "target_sentence"
-  top: "cont_sentence"
-  top: "cont_bbox"
-  python_param {
-    module: 'rpn.sentence_data_layer'
-    layer: 'SentenceDataLayer'
-    param_str: "{'time_steps': 12, 'phrase_path': 'models/dense_cap/h5_data_distill/buffer_100/train_gt_phrases.pkl','mode':'concat'}" 
-  }
-}
-layer {
-  name: "embedding"
-  type: "Embed"
-  bottom: "input_sentence"
-  top: "embedded_input_sentence"
-  propagate_down: 0
-  param {
-    lr_mult: 1
-  }
-  embed_param {
-    bias_term: false
-    input_dim: 10001
-    num_output: 1000
-    weight_filler {
-      type: "uniform"
-      min: -0.08
-      max: 0.08
-    }
-  }
-}
+
 layer{
   name: "fc7_reshape"
   type: "Reshape"
   bottom: "fc7"
-  top: "fc7_reshape"
+  top: "region_features"
   reshape_param {
     shape {
       dim: 1
@@ -614,186 +515,3 @@ layer{
     }
   }
 }
-layer{
-  name: "im_concat_words"
-  type: "Concat"
-  bottom:"fc7_reshape"
-  bottom:"embedded_input_sentence"
-  top: "im_concat_words"
-  concat_param {
-    axis: 0
-  }
-}
-
-
-layer {
-  name: "lstm1"
-  type: "LSTM"
-  bottom: "im_concat_words"
-  bottom: "cont_sentence"
-  top: "lstm1"
-  propagate_down: 1
-  propagate_down: 0
-  recurrent_param {
-    num_output: 1000
-    weight_filler {
-      type: "uniform"
-      min: -0.08
-      max: 0.08
-    }
-    bias_filler {
-      type: "constant"
-      value: 0
-    }
-  }
-}
-
-layer {
-  name: "lstm2"
-  type: "LSTM"
-  bottom: "im_concat_words"
-  bottom: "cont_sentence"
-  top: "lstm2"
-  propagate_down: 1
-  propagate_down: 0
-  recurrent_param {
-    num_output: 1000
-    weight_filler {
-      type: "uniform"
-      min: -0.08
-      max: 0.08
-    }
-    bias_filler {
-      type: "constant"
-      value: 0
-    }
-  }
-}
-
-layer {
-  name: "predict_loc"
-  type: "InnerProduct"
-  bottom: "lstm2"
-  top: "predict_loc"
-  param {
-    lr_mult: 1
-    decay_mult: 1
-  }
-  param {
-    lr_mult: 2
-    decay_mult: 0
-  }
-  inner_product_param {
-    num_output: 4
-    weight_filler {
-      type: "uniform"
-      min: -0.08
-      max: 0.08
-    }
-    bias_filler {
-      type: "constant"
-      value: 0
-    }
-    axis: 2
-  }
-} 
-layer {
-  name: "cont_tile"
-  type: "Tile"
-  bottom: "cont_bbox"
-  top: "cont_tile"
-  tile_param {
-    axis: 2
-    tiles: 4
-  }
-}
-layer {
-  name: "bbox_tile"
-  type: "Tile"
-  bottom: "bbox_targets"
-  top: "bbox_tile"
-  tile_param {
-    axis: 0
-    tiles: 12
-  }
-}
-layer{
-  name: "bbox_tile_reshape"
-  type: "Reshape"
-  bottom: "bbox_tile"
-  top: "bbox_tile_reshape"
-  reshape_param {
-    shape {
-      dim: 12
-      dim: -1
-      dim: 4
-    }
-  }
-}
-layer {
-  name: "smooth_l1_loss"
-  type: "SmoothL1Loss"
-  bottom: "predict_loc"
-  bottom: "bbox_tile_reshape"
-  bottom: "cont_tile"
-  bottom: "cont_tile" 
-  top: "smooth_l1_loss"
-  loss_weight: 0.1
-}
-layer {
-  name: "predict"
-  type: "InnerProduct"
-  bottom: "lstm1"
-  top: "predict"
-  param {
-    lr_mult: 1
-    decay_mult: 1
-  }
-  param {
-    lr_mult: 2
-    decay_mult: 0
-  }
-  inner_product_param {
-    num_output: 10001
-    weight_filler {
-      type: "uniform"
-      min: -0.08
-      max: 0.08
-    }
-    bias_filler {
-      type: "constant"
-      value: 0
-    }
-    axis: 2
-  }
-}
-layer {
-  name: "cross_entropy_loss"
-  type: "SoftmaxWithLoss"
-  bottom: "predict"
-  bottom: "target_sentence"
-  top: "cross_entropy_loss"
-  propagate_down: 1
-  propagate_down: 0
-  loss_weight: 1
-  loss_param {
-    ignore_label: -1
-  }
-  softmax_param {
-    axis: 2
-  }
-}
-layer {
-  name: "accuracy"
-  type: "Accuracy"
-  bottom: "predict"
-  bottom: "target_sentence"
-  top: "accuracy"
-  include { phase: TEST }
-  accuracy_param {
-    axis: 2
-    ignore_label: -1
-  }
-}
-
-

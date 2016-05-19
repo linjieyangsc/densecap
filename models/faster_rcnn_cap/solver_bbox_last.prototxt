@@ -1,16 +1,15 @@
 train_net: "models/faster_rcnn_cap/train_cap_bbox_last.prototxt"
-base_lr: 0.001
+base_lr: 0.0001
 lr_policy: "step"
 gamma: 0.5
-stepsize: 50000
+stepsize: 100000
 display: 20
 average_loss: 100
-momentum: 0.9
-weight_decay: 0.0005
+momentum: 0.99
+weight_decay: 0.000
 # We disable standard caffe solver snapshotting and implement our own snapshot
 # function
 snapshot: 0
 # We still use the snapshot prefix, though
 snapshot_prefix: "faster_rcnn_cap_bbox_last"
-iter_size: 2
-clip_gradients: 50
+clip_gradients: 20
