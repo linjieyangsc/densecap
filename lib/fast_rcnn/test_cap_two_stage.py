@@ -119,13 +119,9 @@ def _get_blobs(im, rois):
 def _greedy_search(embed_net, recurrent_net, forward_args, proposal_n, max_timestep = 12):
     """Do greedy search to find the regions and captions"""
     # Data preparation
-    # for bbox unnormalization
-    # TODO: put it in a more organized way
-    bbox_mean = np.array([0,0,0,0]).reshape((1,4))
-    bbox_stds = np.array([0.1, 0.1, 0.2, 0.2]).reshape((1,4))
+
 
     pred_captions = [None] * proposal_n
-    pred_locations = [None] * proposal_n
     pred_logprobs = [0.0] * proposal_n
     
     # first time step - image features
@@ -149,30 +145,22 @@ def _greedy_search(embed_net, recurrent_net, forward_args, proposal_n, max_times
         forward_args['input_features'] = embed_out['embedded_sentence']
         blobs_out = recurrent_net.forward(**forward_args)
 
-        pred_location = blobs_out['predict_loc'].reshape(proposal_n, 4)# 1 x proposal_n x 4 --> proposal_n x 4
-        pred_location = pred_location * bbox_stds + bbox_mean
         word_probs = blobs_out['probs'].copy()
             
         #suppress <unk> tag
         #word_probs[:,:,1] = 0
         best_words = word_probs.argmax(axis = 2).reshape(proposal_n)
         
-        for i, w, loc in zip(range(proposal_n), best_words, pred_location):
+        for i, w in zip(range(proposal_n), best_words):
             if not pred_captions[i]:
                 pred_captions[i] = [w]
-                pred_locations[i] = [loc]
                 pred_logprobs[i] = math.log(word_probs[0,i,w])
             elif pred_captions[i][-1] != 0:
                 pred_captions[i].append(w)
-                pred_locations[i].append(loc)
                 pred_logprobs[i] += math.log(word_probs[0,i,w])
         input_sentence[:] = best_words
         
-        
-    #transform location sequence to numpy matrix
-    for i in xrange(proposal_n):
-        pred_locations[i] = np.array(pred_locations[i])
-    return pred_captions, pred_locations, pred_logprobs
+    return pred_captions, pred_logprobs
 
 def im_detect(feature_net, embed_net, recurrent_net, im, boxes=None):
     """Detect object classes in an image given object proposals.
@@ -195,6 +183,10 @@ def im_detect(feature_net, embed_net, recurrent_net, im, boxes=None):
     # 1. forward pass of one image --> image features and a list of proposals (rois)
     # 2. for each proposal, do greedy search, which is the same way as DenseCap
     # 
+    # for bbox unnormalization
+    # TODO: put it in a more organized way
+    bbox_mean = np.array([0,0,0,0]).reshape((1,4))
+    bbox_stds = np.array([0.1, 0.1, 0.2, 0.2]).reshape((1,4))
 
     blobs, im_scales = _get_blobs(im, boxes)
     im_blob = blobs['data']
@@ -210,12 +202,13 @@ def im_detect(feature_net, embed_net, recurrent_net, im, boxes=None):
     feature_net.forward(data = im_blob, im_info = blobs['im_info'])
     region_features = feature_net.blobs['region_features'].data.copy()
     rois = feature_net.blobs['rois'].data.copy()
+
     boxes = rois[:, 1:5] / im_scales[0]
     proposal_n = rois.shape[0]
     feat_args = {'input_features': region_features}
     # do greedy search
     
-    captions, locations, logprobs = _greedy_search(embed_net, recurrent_net, feat_args, proposal_n)
+    captions, logprobs = _greedy_search(embed_net, recurrent_net, feat_args, proposal_n)
 
     
     assert len(im_scales) == 1, "Only single-image batch implemented"
@@ -223,25 +216,15 @@ def im_detect(feature_net, embed_net, recurrent_net, im, boxes=None):
 
     
     # use rpn scores, combine with caption score later
-    scores = feature_net.blobs['rpn_scores'].data.copy()
+    scores = feature_net.blobs['cls_probs'].data[:,1].copy()
 
-    #bbox transform
-    #stacking
-
-    boxes_stack = np.concatenate([np.tile(box,(loc.shape[0],1)) for box, loc in zip(boxes, locations)])
-    box_deltas_stack = np.concatenate(locations) # horizontally stacking
-    group_ids = np.array([loc.shape[0] for loc in locations]).cumsum()
-    group_ids = np.insert(group_ids, 0, 0)
+    #bbox target unnormalization
+    box_deltas = feature_net.blobs['bbox_pred'].data * bbox_stds + bbox_mean
     #do the transformation
-    pred_boxes_stack = bbox_transform_inv(boxes_stack, box_deltas_stack)
-    pred_boxes_stack = clip_boxes(pred_boxes_stack, im.shape)
-    #unraveling
-    pred_boxes_seq = [None] * proposal_n
+    pred_boxes = bbox_transform_inv(boxes, box_deltas)
+    pred_boxes = clip_boxes(pred_boxes, im.shape)
     
-    for i in xrange(proposal_n):
-        pred_boxes_seq[i] = pred_boxes_stack[group_ids[i]:group_ids[i+1],:]
-   
-    return scores, pred_boxes_seq, captions
+    return scores, pred_boxes, captions
 
 def vis_detections(im_path, im, captions, dets, thresh=0.6, save_path='vis'):
     """Visual debugging of detections by saving images with detected bboxes."""
@@ -300,7 +283,7 @@ def sentence(vocab, vocab_indices):
       sentence = sentence[:-len(suffix)]
     return sentence
 
-def test_net(feature_net, embed_net, recurrent_net, imdb, max_per_image=100, thresh=0.01, vis=True):
+def test_net(feature_net, embed_net, recurrent_net, imdb, max_per_image=100, vis=True):
     """Test a Fast R-CNN network on an image database."""
     num_images = len(imdb.image_index)
     if DEBUG:
@@ -335,7 +318,7 @@ def test_net(feature_net, embed_net, recurrent_net, imdb, max_per_image=100, thr
 
         im = cv2.imread(imdb.image_path_at(i))
         _t['im_detect'].tic()
-        scores, boxes_seq, captions = im_detect(feature_net, embed_net, recurrent_net, im, box_proposals)
+        scores, boxes, captions = im_detect(feature_net, embed_net, recurrent_net, im, box_proposals)
         #features = extract_feature(net, im)
 
         _t['im_detect'].toc()
@@ -345,32 +328,28 @@ def test_net(feature_net, embed_net, recurrent_net, imdb, max_per_image=100, thr
         if DEBUG:
             print 'shape of scores'
             print scores.shape
-        inds = np.where(scores > thresh)[0]
-        pos_scores = scores[inds]
-        # get the last predicted box
-        pos_boxes_seq = [boxes_seq[idx] for idx in inds]
-        pos_boxes = np.array([bs[-1,:] for bs in pos_boxes_seq])
-        pos_captions = [captions[idx] for idx in inds]
+        
+       
   
-        pos_dets = np.hstack((pos_boxes, pos_scores)) \
+        pos_dets = np.hstack((boxes, scores[:,np.newaxis])) \
             .astype(np.float32, copy=False)
         keep = nms(pos_dets, cfg.TEST.NMS)
         pos_dets = pos_dets[keep, :]
-        pos_scores = pos_scores[keep, 0]
-        pos_captions = [sentence(vocab, pos_captions[idx]) for idx in keep]
-        pos_boxes_seq = [pos_boxes_seq[idx] for idx in keep]
+        pos_scores = scores[keep]
+        pos_captions = [sentence(vocab, captions[idx]) for idx in keep]
+        pos_boxes = boxes[keep,:]
         if vis:
             #TODO(Linjie): display location sequence
             vis_detections(imdb.image_path_at(i), im, pos_captions, pos_dets, save_path = os.path.join(output_dir,'vis'))
         all_regions[i] = []
         #follow the format of baseline models routine
-        for cap, box_seq, prob in zip(pos_captions, pos_boxes_seq, pos_scores):
+        for cap, box, prob in zip(pos_captions, pos_boxes, pos_scores):
             anno = {'image_id':i, 'prob': format(prob,'.3f'), 'caption':cap, \
-            'location_seq': box_seq.tolist(), 'location': box_seq[-1,:].tolist()}
+            'location': box.tolist()}
             all_regions[i].append(anno)
         key = imdb.image_path_at(i).split('/')[-1]
         results[key] = {}
-        results[key]['boxes'] = pos_dets[:,:4].tolist()
+        results[key]['boxes'] = pos_boxes.tolist()
         results[key]['logprobs'] = np.log(pos_scores + eps).tolist()
         results[key]['captions'] = pos_captions
         

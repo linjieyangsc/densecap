@@ -313,7 +313,7 @@ def process_vg(include_trainval=False):
 	datasets = [
 	#		('train', 'train', 100000, True),
 	#		('val', 'val', 100000, True),
-	#		('test', 'val', 100000, True),
+			('test', 'test', 100000, True),
 			('test_subset', 'test_subset', 100000, True)
 		]
 	# Also create a 'trainval' set if include_trainval is set.

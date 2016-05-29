@@ -112,41 +112,51 @@ class SolverWrapper(object):
             self.solver.step(1)
             timer.toc()
             if DEBUG:
-                image = self.solver.net.blobs['data'].data[0,:,:,:].transpose(1,2,0).copy()
-                print 'iter %d' % self.solver.iter
-                print 'shape of image'
-                print image.shape
-                im_info = self.solver.net.blobs['im_info'].data
-                print 'im info'
-                print im_info
-                #gt_boxes = self.solver.net.blobs['gt_boxes'].data
-                rois = self.solver.net.blobs['rois'].data.copy()
-                labels = self.solver.net.blobs['labels'].data.copy()
-                #check sentence
+                # image = self.solver.net.blobs['data'].data[0,:,:,:].transpose(1,2,0).copy()
+                # print 'iter %d' % self.solver.iter
+                # print 'shape of image'
+                # print image.shape
+                # im_info = self.solver.net.blobs['im_info'].data
+                # print 'im info'
+                # print im_info
+                # #gt_boxes = self.solver.net.blobs['gt_boxes'].data
+                # rois = self.solver.net.blobs['rois'].data.copy()
+                # labels = self.solver.net.blobs['labels'].data.copy()
+                # #check sentence
 
-                sentences = self.solver.net.blobs['target_sentence'].data.copy()
-                print 'shape of sentences'
-                print sentences.shape
-                for i in xrange(sentences.shape[1]):
+                # sentences = self.solver.net.blobs['target_sentence'].data.copy()
+                # print 'shape of sentences'
+                # print sentences.shape
+                # for i in xrange(sentences.shape[1]):
                     
-                    region_id = labels[i]
-                    if region_id > 0:
-                        sentence = sentences[:,i]
-                        sentence = sentence[:np.where(sentence==0)[0][0]]
-                        assert(np.all(self._all_phrases[region_id] == np.array(sentence)))
-                        print 'checked %d' % i
-                    else:
-                        assert(sentences[0,i] == -1)
+                #     region_id = labels[i]
+                #     if region_id > 0:
+                #         sentence = sentences[:,i]
+                #         sentence = sentence[:np.where(sentence==0)[0][0]]
+                #         assert(np.all(self._all_phrases[region_id] == np.array(sentence)))
+                #         print 'checked %d' % i
+                #     else:
+                #         assert(sentences[0,i] == -1)
 
                 #rois_labels = np.hstack((rois[:,1:],labels[:,np.newaxis]))
                 #self.vis_regions(image, rois_labels, self.solver.iter)
                 if self.solver.iter > 5: 
                     exit()
+                bbox_pred =self.solver.net.blobs['bbox_pred'].data
+                print 'bbox pred samples'
+                print bbox_pred[:,0,:]
+                bbox_target =self.solver.net.blobs['bbox_tile_reshape'].data
+                print 'bbox target samples'
+                print bbox_target[:,0,:]
+                cont_tile =self.solver.net.blobs['cont_tile'].data
+                print 'cont tile samples'
+                print cont_tile[:,0,:]
+
                 # predict_scores = self.solver.net.blobs['predict'].data
                 # predict_labels = np.argmax(predict_scores, axis = 2)
-                # cont_sentence = self.solver.net.blobs['cont_sentence'].data
-                # print 'cont sentence sample'
-                # print cont_sentence[:,:2]
+                cont_sentence = self.solver.net.blobs['cont_sentence'].data
+                print 'cont sentence sample'
+                print cont_sentence[:,0]
                 # input_sentence = self.solver.net.blobs['input_sentence'].data
                 # print 'input labels sample'
                 # print input_sentence[:,:2] 

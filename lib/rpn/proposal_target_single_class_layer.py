@@ -1,6 +1,6 @@
 ##################################################
 # This layer only applies to single object class
-# Especially for fater-rcnn-lstm since labels no longer denote the object classes 
+# Especially for faster-rcnn-lstm since labels no longer denote the object classes 
 # Linjie Yang, Chinese University of Hong Kong
 # 04/21/2016
 ###################################################
@@ -30,6 +30,11 @@ class ProposalTargetLayer(caffe.Layer):
         # bbox_targets
         top[2].reshape(1, 4)
 
+        if len(top) > 3:
+            top[3].reshape(1,4)
+            top[4].reshape(1,4)
+        if len(top) > 5:
+            top[5].reshape(1,1)
     def forward(self, bottom, top):
         # Proposal ROIs (0, x1, y1, x2, y2) coming from RPN
         # (i.e., rpn.proposal_layer.ProposalLayer), or any other source
@@ -55,7 +60,7 @@ class ProposalTargetLayer(caffe.Layer):
 
         # Sample rois with classification labels and bounding box regression
         # targets
-        labels, rois, bbox_targets = _sample_rois(
+        labels, rois, bbox_targets, bbox_inside_weights = _sample_rois(
             all_rois, gt_boxes, fg_rois_per_image,
             rois_per_image)
 
@@ -75,6 +80,15 @@ class ProposalTargetLayer(caffe.Layer):
         top[2].reshape(*bbox_targets.shape)
         top[2].data[...] = bbox_targets
 
+        if len(top) > 3:
+            top[3].reshape(*bbox_inside_weights.shape)
+            top[3].data[...] = bbox_inside_weights
+            top[4].reshape(*bbox_inside_weights.shape)
+            top[4].data[...] = np.array(bbox_inside_weights > 0).astype(np.float32)
+        #add fg/bg labels
+        if len(top) > 5:
+            top[5].reshape(*labels.shape)
+            top[5].data[...] = np.array(labels > 0).astype(np.float32)
     def backward(self, top, propagate_down, bottom):
         """This layer does not propagate gradients."""
         pass
@@ -94,10 +108,12 @@ def _get_bbox_regression_labels(bbox_target_data):
     """
     clss = bbox_target_data[:, 0]
     bbox_targets = np.zeros((clss.size, 4), dtype=np.float32)
+    bbox_inside_weights = np.zeros(bbox_targets.shape, dtype=np.float32)
     inds = np.where(clss > 0)[0]
     for ind in inds:
         bbox_targets[ind, :] = bbox_target_data[ind, 1:]
-    return bbox_targets
+        bbox_inside_weights[ind,:] = cfg.TRAIN.BBOX_INSIDE_WEIGHTS
+    return bbox_targets, bbox_inside_weights
 
 
 def _compute_targets(ex_rois, gt_rois, labels):
@@ -164,7 +180,7 @@ def _sample_rois(all_rois, gt_boxes, fg_rois_per_image, rois_per_image):
         print target_boxes[:2,:]
         print match_boxes[:2,:]
         assert np.linalg.norm(target_boxes - match_boxes) < 0.01
-    bbox_targets = \
+    bbox_targets, bbox_inside_weights = \
         _get_bbox_regression_labels(bbox_target_data)
 
-    return labels, rois, bbox_targets
+    return labels, rois, bbox_targets, bbox_inside_weights
