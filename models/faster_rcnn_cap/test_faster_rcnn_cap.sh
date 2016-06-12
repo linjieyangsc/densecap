@@ -1,12 +1,12 @@
  
-GPU_ID=1
-NET_FINAL=output/faster_rcnn_end2end/vg_train/faster_rcnn_cap_bbox_last_iter_100000.caffemodel
-TEST_IMDB="vg_test_subset"
+GPU_ID=0
+NET_FINAL=output/faster_rcnn_end2end/vg_train/faster_rcnn_cap_two_stage_im_repeat_finetune_iter_200000.caffemodel
+TEST_IMDB="vg_1.0_test"
 PT_DIR="faster_rcnn_cap"
-time ./lib/tools/test_net_cap.py --gpu ${GPU_ID} \
-  --def_feature models/${PT_DIR}/vgg_deploy.prototxt \
-  --def_recurrent models/${PT_DIR}/test_cap.prototxt \
+time ./lib/tools/test_net_cap_two_stage.py --gpu ${GPU_ID} \
+  --def_feature models/${PT_DIR}/vgg_region_feature_reg.prototxt \
+  --def_recurrent models/${PT_DIR}/test_cap_pred_im_repeat.prototxt \
+  --def_embed models/${PT_DIR}/test_word_embedding.prototxt \
   --net ${NET_FINAL} \
   --imdb ${TEST_IMDB} \
-  --vis \
   --cfg models/${PT_DIR}/faster_rcnn_end2end.yml \

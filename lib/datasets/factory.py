@@ -20,9 +20,10 @@ for year in ['2007', '2012']:
         name = 'voc_{}_{}'.format(year, split)
         __sets[name] = (lambda split=split, year=year: pascal_voc(split, year))
 # Set up visual_genome_<split> using rpn mode
-for split in ['train', 'train_sub','val', 'test','test_subset']:
-    name = 'vg_{}'.format(split)
-    __sets[name] = (lambda split=split: visual_genome(split))
+for version in ['1.0','1.2']:
+    for split in ['train', 'train_sample','val', 'test','test_subset']:
+        name = 'vg_{}_{}'.format(version, split)
+        __sets[name] = (lambda split=split, version=version: visual_genome(split,version))
 # Set up coco_2014_<split>
 for year in ['2014']:
     for split in ['train', 'val', 'minival', 'valminusminival']:

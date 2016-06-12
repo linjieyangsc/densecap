@@ -97,15 +97,6 @@ class SolverWrapper(object):
         last_snapshot_iter = -1
         timer = Timer()
         model_paths = []
-        if DEBUG:
-            import cPickle
-
-            phrase_path = 'models/dense_cap/h5_data_distill/buffer_100/train_gt_phrases.pkl'
-            self._all_phrases = cPickle.load(open(phrase_path,'rb'))
-            vocab_path = 'models/dense_cap/h5_data_distill/buffer_100/vocabulary.txt'
-            with open(vocab_path,'r') as f:
-                self._vocab = [line.strip() for line in f]
-            self._vocab.insert(0, '<EOS>')
         while self.solver.iter < max_iters:
             # Make one SGD update
             timer.tic()
@@ -140,23 +131,54 @@ class SolverWrapper(object):
 
                 #rois_labels = np.hstack((rois[:,1:],labels[:,np.newaxis]))
                 #self.vis_regions(image, rois_labels, self.solver.iter)
-                if self.solver.iter > 5: 
+                if self.solver.iter > 40: 
                     exit()
+                # fc7_diff =self.solver.net.blobs['fc7_1'].diff
+                # print 'fc7 diff samples'
+                # print fc7_diff[0,:]
+                # print fc7_diff[-1,:]
+                # bbox_pred =self.solver.net.blobs['bbox_pred'].data
+                # bbox_pred_d =self.solver.net.blobs['bbox_pred'].diff
+                # print 'bbox pred samples'
+                # print bbox_pred[0,:]
+                # print bbox_pred[-1,:]
+                # print 'bbox pred diff samples'
+                # print bbox_pred_d[0,:]
+                # print bbox_pred_d[-1,:]
+               
+                fc7_diff =self.solver.net.blobs['fc7_reshape'].diff
+                print 'fc7 diff samples'
+                print fc7_diff[0,0,:]
+                print fc7_diff[0,-1,:]
                 bbox_pred =self.solver.net.blobs['bbox_pred'].data
+                bbox_pred_d =self.solver.net.blobs['bbox_pred'].diff
                 print 'bbox pred samples'
                 print bbox_pred[:,0,:]
-                bbox_target =self.solver.net.blobs['bbox_tile_reshape'].data
-                print 'bbox target samples'
-                print bbox_target[:,0,:]
-                cont_tile =self.solver.net.blobs['cont_tile'].data
-                print 'cont tile samples'
-                print cont_tile[:,0,:]
+                print bbox_pred[:,-1,:]
+                print 'bbox pred diff samples'
+                print bbox_pred_d[:,0,:]
+                print bbox_pred_d[:,-1,:]
 
-                # predict_scores = self.solver.net.blobs['predict'].data
-                # predict_labels = np.argmax(predict_scores, axis = 2)
-                cont_sentence = self.solver.net.blobs['cont_sentence'].data
-                print 'cont sentence sample'
-                print cont_sentence[:,0]
+                # bbox_target =self.solver.net.blobs['bbox_tile_reshape'].data
+                # print 'bbox target samples'
+                # print bbox_target[:,0,:]
+                # print bbox_target[:,-1,:]
+                # cont_tile =self.solver.net.blobs['cont_tile'].data
+                # print 'cont tile samples'
+                # print cont_tile[:,0,:]
+                # print cont_tile[:,-1,:]
+
+                bbox_target =self.solver.net.blobs['bbox_targets'].data
+                print 'bbox target samples'
+                print bbox_target[0,:]
+                print bbox_target[-1,:]
+                bbox_weights = self.solver.net.blobs['bbox_inside_weights'].data
+                print 'bbox inside weights'
+                print bbox_weights[0,:]
+                print bbox_weights[-1,:]
+                # l1_loss = self.solver.net.blobs['loss_bbox'].data
+                # print 'l1_loss'
+                # print l1_loss
                 # input_sentence = self.solver.net.blobs['input_sentence'].data
                 # print 'input labels sample'
                 # print input_sentence[:,:2] 

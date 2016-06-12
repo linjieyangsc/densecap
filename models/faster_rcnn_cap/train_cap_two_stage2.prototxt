@@ -227,6 +227,25 @@ layer {
   param {
     lr_mult: 0
   }
+  include { stage: "freeze-convnet" }
+  convolution_param {
+    num_output: 512
+    pad: 1
+    kernel_size: 3
+  }
+}
+layer {
+  name: "conv4_1"
+  type: "Convolution"
+  bottom: "pool3"
+  top: "conv4_1"
+  param {
+    lr_mult: 0.1
+  }
+  param {
+    lr_mult: 0.2
+  }
+  exclude { stage: "freeze-convnet" }
   convolution_param {
     num_output: 512
     pad: 1
@@ -250,6 +269,25 @@ layer {
   param {
     lr_mult: 0
   }
+  include { stage: "freeze-convnet" }
+  convolution_param {
+    num_output: 512
+    pad: 1
+    kernel_size: 3
+  }
+}
+layer {
+  name: "conv4_2"
+  type: "Convolution"
+  bottom: "conv4_1"
+  top: "conv4_2"
+  param {
+    lr_mult: 0.1
+  }
+  param {
+    lr_mult: 0.2
+  }
+  exclude { stage: "freeze-convnet" }
   convolution_param {
     num_output: 512
     pad: 1
@@ -273,6 +311,25 @@ layer {
   param {
     lr_mult: 0
   }
+  include { stage: "freeze-convnet" }
+  convolution_param {
+    num_output: 512
+    pad: 1
+    kernel_size: 3
+  }
+}
+layer {
+  name: "conv4_3"
+  type: "Convolution"
+  bottom: "conv4_2"
+  top: "conv4_3"
+  param {
+    lr_mult: 0.1
+  }
+  param {
+    lr_mult: 0.2
+  }
+  exclude { stage: "freeze-convnet" }
   convolution_param {
     num_output: 512
     pad: 1
@@ -307,6 +364,25 @@ layer {
   param {
     lr_mult: 0
   }
+  include { stage: "freeze-convnet" }
+  convolution_param {
+    num_output: 512
+    pad: 1
+    kernel_size: 3
+  }
+}
+layer {
+  name: "conv5_1"
+  type: "Convolution"
+  bottom: "pool4"
+  top: "conv5_1"
+  param {
+    lr_mult: 0.1
+  }
+  param {
+    lr_mult: 0.2
+  }
+  exclude { stage: "freeze-convnet" }
   convolution_param {
     num_output: 512
     pad: 1
@@ -319,6 +395,7 @@ layer {
   bottom: "conv5_1"
   top: "conv5_1"
 }
+
 layer {
   name: "conv5_2"
   type: "Convolution"
@@ -330,6 +407,25 @@ layer {
   param {
     lr_mult: 0
   }
+  include { stage: "freeze-convnet" }
+  convolution_param {
+    num_output: 512
+    pad: 1
+    kernel_size: 3
+  }
+}
+layer {
+  name: "conv5_2"
+  type: "Convolution"
+  bottom: "conv5_1"
+  top: "conv5_2"
+  param {
+    lr_mult: 0.1
+  }
+  param {
+    lr_mult: 0.2
+  }
+  exclude { stage: "freeze-convnet" }
   convolution_param {
     num_output: 512
     pad: 1
@@ -353,6 +449,25 @@ layer {
   param {
     lr_mult: 0
   }
+  include { stage: "freeze-convnet" }
+  convolution_param {
+    num_output: 512
+    pad: 1
+    kernel_size: 3
+  }
+}
+layer {
+  name: "conv5_3"
+  type: "Convolution"
+  bottom: "conv5_2"
+  top: "conv5_3"
+  param {
+    lr_mult: 0.1
+  }
+  param {
+    lr_mult: 0.2
+  }
+  exclude { stage: "freeze-convnet" }
   convolution_param {
     num_output: 512
     pad: 1
@@ -650,17 +765,29 @@ layer {
   param {
     lr_mult: 2
   }
+  include {stage: "lstm-1000"}
   inner_product_param {
+    weight_filler { type: "gaussian" std: 0.01 }
+    bias_filler { type: "constant" value: 0 }
     num_output: 1000
-    weight_filler {
-      type: "uniform"
-      min: -0.01
-      max: 0.01
-    }
-    bias_filler {
-      type: "constant"
-      value: 0
-    }
+  }
+}
+layer {
+  name: "fc8_new"
+  type: "InnerProduct"
+  bottom: "fc7"
+  top: "fc8"
+  param {
+    lr_mult: 1
+  }
+  param {
+    lr_mult: 2
+  }
+  include {stage: "lstm-512"}
+  inner_product_param {
+    weight_filler { type: "gaussian" std: 0.01 }
+    bias_filler { type: "constant" value: 0 }
+    num_output: 512
   }
 }
 #retrieve sentences from region ids, newly implemented by Linjie
@@ -687,14 +814,42 @@ layer {
   param {
     lr_mult: 1
   }
+  include {stage: "lstm-1000"}
   embed_param {
     bias_term: false
     input_dim: 10001
     num_output: 1000
-    weight_filler {
-      type: "uniform"
-      min: -0.08
-      max: 0.08
+    weight_filler { type: "gaussian" std: 0.01 }
+  }
+}
+layer {
+  name: "embedding"
+  type: "Embed"
+  bottom: "input_sentence"
+  top: "embedded_input_sentence"
+  propagate_down: 0
+  param {
+    lr_mult: 1
+  }
+  include {stage: "lstm-512"}
+  embed_param {
+    bias_term: false
+    input_dim: 10001
+    num_output: 512
+    weight_filler { type: "gaussian" std: 0.01 }
+  }
+}
+layer{
+  name: "fc8_reshape"
+  type: "Reshape"
+  bottom: "fc8"
+  top: "fc8_reshape"
+  include {stage: "lstm-1000"}
+  reshape_param {
+    shape {
+      dim: 1
+      dim: -1
+      dim: 1000
     }
   }
 }
@@ -703,11 +858,12 @@ layer{
   type: "Reshape"
   bottom: "fc8"
   top: "fc8_reshape"
+  include {stage: "lstm-512"}
   reshape_param {
     shape {
       dim: 1
       dim: -1
-      dim: 1000
+      dim: 512
     }
   }
 }
@@ -722,7 +878,6 @@ layer{
   }
 }
 
-
 layer {
   name: "lstm1"
   type: "LSTM"
@@ -731,46 +886,53 @@ layer {
   top: "lstm1"
   propagate_down: 1
   propagate_down: 0
+  include {stage: 1000}
   recurrent_param {
     num_output: 1000
-    weight_filler {
-      type: "uniform"
-      min: -0.08
-      max: 0.08
-    }
-    bias_filler {
-      type: "constant"
-      value: 0
-    }
+    weight_filler { type: "gaussian" std: 0.01 }
+    bias_filler { type: "constant" value: 0 }
   }
 }
-
 layer {
-  name: "lstm2"
+  name: "lstm1"
   type: "LSTM"
   bottom: "im_concat_words"
   bottom: "cont_sentence"
-  top: "lstm2"
+  top: "lstm1"
   propagate_down: 1
   propagate_down: 0
+  include {stage: 512}
   recurrent_param {
-    num_output: 300
-    weight_filler {
-      type: "uniform"
-      min: -0.02
-      max: 0.02
-    }
-    bias_filler {
-      type: "constant"
-      value: 0
-    }
+    num_output: 512
+    weight_filler { type: "gaussian" std: 0.01 }
+    bias_filler { type: "constant" value: 0 }
+  }
+}
+layer {
+  name: "fc8_tile"
+  type: "Tile"
+  bottom: "fc8_reshape"
+  top: "fc8_tile"
+  tile_param {
+    axis: 0
+    tiles: 12
+  }
+}
+layer {
+  name: "fc8_concat_lstm"
+  type: "Concat"
+  bottom: "fc8_tile"
+  bottom: "lstm1"
+  top: "fc8_concat_lstm"
+  concat_param {
+    axis: 2
   }
 }
 
 layer {
   name: "bbox_pred"
   type: "InnerProduct"
-  bottom: "lstm2"
+  bottom: "fc8_concat_lstm"
   top: "bbox_pred"
   param {
     lr_mult: 1
@@ -782,15 +944,8 @@ layer {
   }
   inner_product_param {
     num_output: 4
-    weight_filler {
-      type: "uniform"
-      min: -0.01
-      max: 0.01
-    }
-    bias_filler {
-      type: "constant"
-      value: 0
-    }
+   weight_filler { type: "gaussian" std: 0.01 }
+    bias_filler { type: "constant" value: 0 }
     axis: 2
   }
 } 
@@ -865,15 +1020,8 @@ layer {
   }
   inner_product_param {
     num_output: 10001
-    weight_filler {
-      type: "uniform"
-      min: -0.08
-      max: 0.08
-    }
-    bias_filler {
-      type: "constant"
-      value: 0
-    }
+    weight_filler { type: "gaussian" std: 0.01 }
+    bias_filler { type: "constant" value: 0 }
     axis: 2
   }
 }

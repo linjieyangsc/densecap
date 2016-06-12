@@ -16,10 +16,14 @@ USE_CACHE = True
 UNK_IDENTIFIER='<unk>'
 DEVKIT_PATH='models/dense_cap/h5_data_distill/buffer_100'
 class visual_genome(imdb):
-    def __init__(self, image_set, devkit_path=DEVKIT_PATH):
+    def __init__(self, image_set, version):
         imdb.__init__(self, 'vg_' + image_set)
         self._image_set = image_set
-        self._devkit_path = devkit_path
+        if version=='1.0':
+            self._devkit_path = DEVKIT_PATH 
+        else:
+            self._devkit_path = 'models/dense_cap/h5_data_distill2/buffer_100'
+      
         self._data_path = self._devkit_path
         
         self._image_ext = '.jpg'
@@ -200,6 +204,6 @@ class visual_genome(imdb):
 
 
 if __name__ == '__main__':
-    d = visual_genome('train')
+    d = visual_genome('train','1.0')
     res = d.roidb
     from IPython import embed; embed()

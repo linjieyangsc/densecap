@@ -20,12 +20,13 @@ import json
 from utils.blob import im_list_to_blob
 import os
 import sys
+import gc
 sys.path.append('models/dense_cap/')
 from run_experiment_vgg_vg import gt_region_merge, get_bbox_coord
 from vg_to_hdf5_data import *
 #sys.path.add('examples/coco-caption')
 #import
-COCO_EVAL_PATH = '/media/researchshare/linjie/data/MS_COCO/coco-caption/'
+COCO_EVAL_PATH = 'coco-caption/'
 sys.path.append(COCO_EVAL_PATH)
 from pycocoevalcap.vg_eval import VgEvalCap
 eps = 1e-10
@@ -125,7 +126,8 @@ def _greedy_search(embed_net, recurrent_net, forward_args, proposal_n, max_times
     pred_logprobs = [0.0] * proposal_n
     pred_bbox_offsets = np.zeros((proposal_n, 4))
     # first time step - image features
-
+    if 'image_features' in recurrent_net.blobs:
+        forward_args['image_features'] = forward_args['input_features'].copy()
     
     #forward_args['']
     forward_args['cont_sentence'] = np.zeros((1,proposal_n))
@@ -136,7 +138,9 @@ def _greedy_search(embed_net, recurrent_net, forward_args, proposal_n, max_times
         if DEBUG:
             print 'shape of %s is ' % k
             print v.shape
-        recurrent_net.blobs[k].reshape(*(v.shape))
+	
+        recurrent_net.blobs[k].reshape(*(v.shape)) 
+	    
     recurrent_net.forward(**forward_args)
     embed_net.blobs['input_sentence'].reshape(1, proposal_n)    
     forward_args['cont_sentence'][:] = 1
@@ -355,7 +359,6 @@ def test_net(feature_net, embed_net, recurrent_net, imdb, max_per_image=100, vis
         results[key]['captions'] = pos_captions
         
 
-        
         _t['misc'].toc()
 
         print 'im_detect: {:d}/{:d} {:.3f}s {:.3f}s' \

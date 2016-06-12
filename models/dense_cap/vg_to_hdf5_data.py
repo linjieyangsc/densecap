@@ -11,7 +11,7 @@ import json
 sys.path.append('./examples/coco_caption/')
 import time
 import numpy as np
-VG_PATH = '/media/researchshare/linjie/data/visual-genome'
+VG_PATH = '/home/ljyang/work/data/visual_genome'
 #COCO_TOOL_PATH = '%s/coco/PythonAPI/' % COCO_PATH
 VG_IMAGE_ROOT = '%s/images' % VG_PATH
 VG_REGION_PATH = '%s/region_descriptions.json' % VG_PATH
@@ -28,9 +28,10 @@ punct_list = ['.','?','!']
 # Remove punctuations or not
 REMOVE_PUNCT=True
 # preload vocabulary or not
-PRELOAD_VOCAB=True
-BASE_DIR = 'models/dense_cap'
-VOCAB_PATH = '%s/h5_data_distill/buffer_100/vocabulary.txt' % BASE_DIR
+PRELOAD_VOCAB=False
+BASE_DIR = 'models/dense_cap/h5_data_distill2'
+
+VOCAB_PATH = '%s/buffer_100/vocabulary.txt' % BASE_DIR
 from hdf5_sequence_generator2 import SequenceGenerator, HDF5SequenceWriter
 
 # UNK_IDENTIFIER is the word used to identify unknown words
@@ -247,12 +248,11 @@ class VGSequenceGenerator(SequenceGenerator):
 VG_IMAGE_PATTERN = '%s/%%d.jpg' % VG_IMAGE_ROOT
 
 BUFFER_SIZE =100
-if REMOVE_PUNCT:
-	OUTPUT_DIR = '%s/h5_data_distill/buffer_%d' % (BASE_DIR, BUFFER_SIZE)
-else:
-	OUTPUT_DIR = '%s/h5_data/buffer_%d' % (BASE_DIR, BUFFER_SIZE)
 
-SPLITS_PATTERN = '/media/researchshare/linjie/data/visual-genome/densecap_splits/%s.txt'
+OUTPUT_DIR = '%s/buffer_%d' % (BASE_DIR, BUFFER_SIZE)
+
+
+SPLITS_PATTERN = VG_PATH + '/densecap_splits/%s.txt'
 OUTPUT_DIR_PATTERN = '%s/%%s_batches' % OUTPUT_DIR
 
 def process_dataset(split_name, coco_split_name, batch_stream_length,
@@ -311,17 +311,14 @@ def process_vg(include_trainval=False):
 			vocab = [line.strip() for line in f]
 
 	datasets = [
-	#		('train', 'train', 100000, True),
-	#		('val', 'val', 100000, True),
+			('train', 'train', 100000, True),
+			('val', 'val', 100000, True),
+	
 			('test', 'test', 100000, True),
-			('test_subset', 'test_subset', 100000, True)
+	#		('test_subset', 'test_subset', 100000, True)
 		]
 	# Also create a 'trainval' set if include_trainval is set.
 	# ./data/coco/make_trainval.py must have been run for this to work.
-	if include_trainval:
-		datasets += [
-			('trainval', 'trainval', 100000, True),
-			]
 	for split_name, coco_split_name, batch_stream_length, aligned in datasets:
 		vocab = process_dataset(split_name, coco_split_name, batch_stream_length,
 														vocab=vocab, aligned=aligned)

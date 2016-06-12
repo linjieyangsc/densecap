@@ -13,7 +13,7 @@ np.random.seed(seed=0)
 sys.path.append('./examples/coco_caption/')  
 from vg_to_hdf5_data import *
 from region_captioner import RegionCaptioner
-COCO_EVAL_PATH = '/media/researchshare/linjie/data/MS_COCO/coco-caption/'
+COCO_EVAL_PATH = 'coco-caption/'
 sys.path.append(COCO_EVAL_PATH)
 from pycocoevalcap.vg_eval import VgEvalCap
 

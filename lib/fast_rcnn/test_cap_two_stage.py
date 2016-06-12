@@ -116,17 +116,21 @@ def _get_blobs(im, rois):
     if not cfg.TEST.HAS_RPN:
         blobs['rois'] = _get_rois_blob(rois, im_scale_factors)
     return blobs, im_scale_factors
-def _greedy_search(embed_net, recurrent_net, forward_args, proposal_n, max_timestep = 12):
+def _greedy_search(embed_net, recurrent_net, forward_args, proposal_n, max_timestep = 12, bbox_pred_direct = True, im_first=True):
     """Do greedy search to find the regions and captions"""
     # Data preparation
 
 
     pred_captions = [None] * proposal_n
     pred_logprobs = [0.0] * proposal_n
-    
+    pred_bbox_offsets = np.zeros((proposal_n, 4))
     # first time step - image features
-
-    
+    if 'image_features' in recurrent_net.blobs:
+        forward_args['image_features'] = forward_args['input_features'].copy()
+        if not im_first:
+            im_feats = forward_args['image_features']
+            # remove the first dimension
+            forward_args['image_features'] = im_feats.reshape(im_feats.shape[1:])
     #forward_args['']
     forward_args['cont_sentence'] = np.zeros((1,proposal_n))
     
@@ -137,16 +141,19 @@ def _greedy_search(embed_net, recurrent_net, forward_args, proposal_n, max_times
             print 'shape of %s is ' % k
             print v.shape
         recurrent_net.blobs[k].reshape(*(v.shape))
-    recurrent_net.forward(**forward_args)
-    embed_net.blobs['input_sentence'].reshape(1, proposal_n)    
-    forward_args['cont_sentence'][:] = 1
+    
+    
+    embed_net.blobs['input_sentence'].reshape(1, proposal_n)
+    if im_first:
+        recurrent_net.forward(**forward_args)
+        forward_args['cont_sentence'][:] = 1
     for step in xrange(max_timestep):
         embed_out = embed_net.forward(input_sentence=input_sentence)
         forward_args['input_features'] = embed_out['embedded_sentence']
         blobs_out = recurrent_net.forward(**forward_args)
 
         word_probs = blobs_out['probs'].copy()
-            
+        bbox_pred = blobs_out['bbox_pred'] if not bbox_pred_direct else None
         #suppress <unk> tag
         #word_probs[:,:,1] = 0
         best_words = word_probs.argmax(axis = 2).reshape(proposal_n)
@@ -158,9 +165,10 @@ def _greedy_search(embed_net, recurrent_net, forward_args, proposal_n, max_times
             elif pred_captions[i][-1] != 0:
                 pred_captions[i].append(w)
                 pred_logprobs[i] += math.log(word_probs[0,i,w])
+                pred_bbox_offsets[i,:] = bbox_pred[0,i,:] if not bbox_pred_direct else 0
         input_sentence[:] = best_words
-        
-    return pred_captions, pred_logprobs
+        forward_args['cont_sentence'][:] = 1
+    return pred_captions, pred_bbox_offsets, pred_logprobs
 
 def im_detect(feature_net, embed_net, recurrent_net, im, boxes=None):
     """Detect object classes in an image given object proposals.
@@ -189,6 +197,7 @@ def im_detect(feature_net, embed_net, recurrent_net, im, boxes=None):
     bbox_stds = np.array([0.1, 0.1, 0.2, 0.2]).reshape((1,4))
 
     blobs, im_scales = _get_blobs(im, boxes)
+    assert len(im_scales) == 1, "Only single-image batch implemented"
     im_blob = blobs['data']
     blobs['im_info'] = np.array(
         [[im_blob.shape[2], im_blob.shape[3], im_scales[0]]],
@@ -198,7 +207,6 @@ def im_detect(feature_net, embed_net, recurrent_net, im, boxes=None):
     feature_net.blobs['data'].reshape(*(blobs['data'].shape))
     feature_net.blobs['im_info'].reshape(*(blobs['im_info'].shape))
     
-    #proposal_n = something here
     feature_net.forward(data = im_blob, im_info = blobs['im_info'])
     region_features = feature_net.blobs['region_features'].data.copy()
     rois = feature_net.blobs['rois'].data.copy()
@@ -206,20 +214,25 @@ def im_detect(feature_net, embed_net, recurrent_net, im, boxes=None):
     boxes = rois[:, 1:5] / im_scales[0]
     proposal_n = rois.shape[0]
     feat_args = {'input_features': region_features}
-    # do greedy search
-    
-    captions, logprobs = _greedy_search(embed_net, recurrent_net, feat_args, proposal_n)
-
-    
-    assert len(im_scales) == 1, "Only single-image batch implemented"
-    
-
     
     # use rpn scores, combine with caption score later
     scores = feature_net.blobs['cls_probs'].data[:,1].copy()
+    bbox_pred_direct = ('bbox_pred' in feature_net.blobs)
+    #print recurrent_net.params['lstm1']
+    # use the number of input to lstm1 to determine the image feature mode to the lstm (first or all)
+    im_first = (len(recurrent_net.params['lstm1']) == 3)
+    if bbox_pred_direct:
+        # do greedy search
+        captions, _, logprobs = _greedy_search(embed_net, recurrent_net, feat_args, proposal_n, bbox_pred_direct=bbox_pred_direct, im_first=im_first)
+        #bbox target unnormalization
+        box_offsets = feature_net.blobs['bbox_pred'].data
+    else:
 
+        captions, box_offsets, logprobs = _greedy_search(embed_net, recurrent_net, feat_args, proposal_n, bbox_pred_direct=bbox_pred_direct, im_first=im_first)
+   
     #bbox target unnormalization
-    box_deltas = feature_net.blobs['bbox_pred'].data * bbox_stds + bbox_mean
+    box_deltas = box_offsets * bbox_stds + bbox_mean
+
     #do the transformation
     pred_boxes = bbox_transform_inv(boxes, box_deltas)
     pred_boxes = clip_boxes(pred_boxes, im.shape)

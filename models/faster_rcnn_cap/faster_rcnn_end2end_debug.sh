@@ -12,12 +12,11 @@ set -e
 export PYTHONUNBUFFERED="True"
 
 GPU_ID=$1
-NET_lc=${NET,,}
 DATASET=$2
-
+SOLVER=$3
 array=( $@ )
 len=${#array[@]}
-EXTRA_ARGS=${array[@]:2:$len}
+EXTRA_ARGS=${array[@]:3:$len}
 EXTRA_ARGS_SLUG=${EXTRA_ARGS// /_}
 
 case $DATASET in
@@ -37,7 +36,7 @@ case $DATASET in
     ITERS=490000
     ;;
   visual_genome)
-    TRAIN_IMDB="vg_train_sub"
+    TRAIN_IMDB="vg_train_sample"
     TEST_IMDB="vg_val"
     PT_DIR="faster_rcnn_cap"
     ITERS=500000
@@ -50,7 +49,7 @@ esac
 
 GLOG_logtostderr=1
 ./lib/tools/train_net.py --gpu ${GPU_ID} \
-  --solver models/${PT_DIR}/solver.prototxt \
+   --solver models/${PT_DIR}/${SOLVER} \
   --weights models/vggnet/VGG_ILSVRC_16_layers.caffemodel \
   --imdb ${TRAIN_IMDB} \
   --iters ${ITERS} \
