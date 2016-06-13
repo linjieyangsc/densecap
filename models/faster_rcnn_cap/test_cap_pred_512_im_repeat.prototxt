@@ -1,10 +1,15 @@
 name: "VGG_ILSVRC_16_layers"
+input: "image_features"
+input_shape {
+  dim: 1
+  dim: 512
+}
 
 input: "input_features"
 input_shape {
   dim: 1
   dim: 1
-  dim: 1000
+  dim: 512
 }
 input: "cont_sentence"
 input_shape {
@@ -16,48 +21,23 @@ layer {
   type: "LSTM"
   bottom: "input_features"
   bottom: "cont_sentence"
+  bottom: "image_features"
   top: "lstm1"
-  propagate_down: 1
-  propagate_down: 0
   recurrent_param {
-    num_output: 1000
-    weight_filler {
-      type: "uniform"
-      min: -0.08
-      max: 0.08
-    }
-    bias_filler {
-      type: "constant"
-      value: 0
-    }
+    num_output: 512
   }
 }
+
  
+
 
 layer {
   name: "predict"
   type: "InnerProduct"
   bottom: "lstm1"
   top: "predict"
-  param {
-    lr_mult: 1
-    decay_mult: 1
-  }
-  param {
-    lr_mult: 2
-    decay_mult: 0
-  }
   inner_product_param {
     num_output: 10001
-    weight_filler {
-      type: "uniform"
-      min: -0.08
-      max: 0.08
-    }
-    bias_filler {
-      type: "constant"
-      value: 0
-    }
     axis: 2
   }
 }

@@ -1,4 +1,4 @@
-train_net: "models/faster_rcnn_cap/train_cap_two_stage5.prototxt"
+train_net: "models/faster_rcnn_cap/train_cap_two_stage_cross.prototxt"
 base_lr: 0.0001
 lr_policy: "step"
 gamma: 0.5
@@ -12,6 +12,6 @@ train_state: {stage: "lstm-1000"}
 # function
 snapshot: 0
 # We still use the snapshot prefix, though
-snapshot_prefix: "faster_rcnn_cap_two_stage5_finetune"
+snapshot_prefix: "faster_rcnn_cap_two_stage_cross_finetune"
 clip_gradients: 40
 #debug_info: true

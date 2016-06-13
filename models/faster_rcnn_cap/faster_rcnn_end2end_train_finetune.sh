@@ -1,6 +1,6 @@
+# Do freeze-convnet training first, then finetuning
 # Example:
-# ./models/faster_rcnn_cap/faster_rcnn_end2end_two_stage.sh 1 visual_genome SOLVER_NAME
-# ./models/faster_rcnn_cap/faster_rcnn_end2end_two_stage.sh 1 visual_genome SOLVER_NAME PRETRAINED_MODEL_PATH
+# ./models/faster_rcnn_cap/faster_rcnn_end2end_train_finetune.sh 1 visual_genome MODEL_TYPE
 
 set -x
 set -e
@@ -9,22 +9,15 @@ export PYTHONUNBUFFERED="True"
 
 GPU_ID=$1
 DATASET=$2
-SOLVER=$3
+MODEL_TYPE=$3
 
 array=( $@ )
 len=${#array[@]}
-# finetuning CNN, needs model path 
-if [ $len -eq 4 ]; then
-WEIGHTS=$4
-EXTRA_ARGS=${array[@]:4:$len}
-else
-# finetuning from vgg model, fixing CNN
 WEIGHTS=models/vggnet/VGG_ILSVRC_16_layers.caffemodel
 EXTRA_ARGS=${array[@]:3:$len}
-fi
 EXTRA_ARGS_SLUG=${EXTRA_ARGS// /_}
 case $DATASET in
-  visual_genome)
+   visual_genome)
     TRAIN_IMDB="vg_1.0_train"
     TEST_IMDB="vg_1.0_val"
     PT_DIR="faster_rcnn_cap"
@@ -41,15 +34,22 @@ case $DATASET in
     exit
     ;;
 esac
-
+#Training
 GLOG_logtostderr=1
 ./lib/tools/train_net.py --gpu ${GPU_ID} \
-  --solver models/${PT_DIR}/${SOLVER} \
+  --solver models/${PT_DIR}/solver_${MODEL_TYPE}.prototxt \
   --weights ${WEIGHTS} \
   --imdb ${TRAIN_IMDB} \
   --iters ${ITERS} \
   --cfg models/${PT_DIR}/faster_rcnn_end2end.yml \
   ${EXTRA_ARGS}
-
-
+NEW_WEIGHTS=output/faster_rcnn_end2end/vg_train/faster_rcnn_cap_${MODEL_TYPE}_iter_${ITERS}.caffemodel
+# Finetuning
+./lib/tools/train_net.py --gpu ${GPU_ID} \
+  --solver models/${PT_DIR}/solver_${MODEL_TYPE}_finetune.prototxt \
+  --weights ${NEW_WEIGHTS} \
+  --imdb ${TRAIN_IMDB} \
+  --iters ${ITERS} \
+  --cfg models/${PT_DIR}/faster_rcnn_end2end.yml \
+  ${EXTRA_ARGS}
 
