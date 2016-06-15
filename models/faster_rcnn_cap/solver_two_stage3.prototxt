@@ -7,7 +7,7 @@ display: 20
 average_loss: 100
 momentum: 0.98
 weight_decay: 0.000
-train_state: { stage: 'freeze-convnet'}
+train_state: { stage: "freeze-convnet" stage: "lstm-1000"}
 # We disable standard caffe solver snapshotting and implement our own snapshot
 # function
 snapshot: 0

@@ -98,112 +98,41 @@ class SolverWrapper(object):
         timer = Timer()
         model_paths = []
         while self.solver.iter < max_iters:
+            
+            
             # Make one SGD update
             timer.tic()
             self.solver.step(1)
             timer.toc()
             if DEBUG:
-                # image = self.solver.net.blobs['data'].data[0,:,:,:].transpose(1,2,0).copy()
-                # print 'iter %d' % self.solver.iter
-                # print 'shape of image'
-                # print image.shape
-                # im_info = self.solver.net.blobs['im_info'].data
-                # print 'im info'
-                # print im_info
-                # #gt_boxes = self.solver.net.blobs['gt_boxes'].data
-                # rois = self.solver.net.blobs['rois'].data.copy()
-                # labels = self.solver.net.blobs['labels'].data.copy()
-                # #check sentence
-
-                # sentences = self.solver.net.blobs['target_sentence'].data.copy()
-                # print 'shape of sentences'
-                # print sentences.shape
-                # for i in xrange(sentences.shape[1]):
-                    
-                #     region_id = labels[i]
-                #     if region_id > 0:
-                #         sentence = sentences[:,i]
-                #         sentence = sentence[:np.where(sentence==0)[0][0]]
-                #         assert(np.all(self._all_phrases[region_id] == np.array(sentence)))
-                #         print 'checked %d' % i
-                #     else:
-                #         assert(sentences[0,i] == -1)
-
-                #rois_labels = np.hstack((rois[:,1:],labels[:,np.newaxis]))
-                #self.vis_regions(image, rois_labels, self.solver.iter)
-                if self.solver.iter > 40: 
-                    exit()
-                # fc7_diff =self.solver.net.blobs['fc7_1'].diff
+                
+                
+                #print self.solver.net.blobs['conv3_3'].diff
+                print self.solver.net.params['conv3_3'][0].data
+                # fc7_diff =self.solver.net.blobs['fc7_reshape'].diff
                 # print 'fc7 diff samples'
-                # print fc7_diff[0,:]
-                # print fc7_diff[-1,:]
+                # print fc7_diff[0,0,:]
+                # print fc7_diff[0,-1,:]
                 # bbox_pred =self.solver.net.blobs['bbox_pred'].data
                 # bbox_pred_d =self.solver.net.blobs['bbox_pred'].diff
                 # print 'bbox pred samples'
-                # print bbox_pred[0,:]
-                # print bbox_pred[-1,:]
+                # print bbox_pred[:,0,:]
+                # print bbox_pred[:,-1,:]
                 # print 'bbox pred diff samples'
-                # print bbox_pred_d[0,:]
-                # print bbox_pred_d[-1,:]
+                # print bbox_pred_d[:,0,:]
+                # print bbox_pred_d[:,-1,:]
+
                
-                fc7_diff =self.solver.net.blobs['fc7_reshape'].diff
-                print 'fc7 diff samples'
-                print fc7_diff[0,0,:]
-                print fc7_diff[0,-1,:]
-                bbox_pred =self.solver.net.blobs['bbox_pred'].data
-                bbox_pred_d =self.solver.net.blobs['bbox_pred'].diff
-                print 'bbox pred samples'
-                print bbox_pred[:,0,:]
-                print bbox_pred[:,-1,:]
-                print 'bbox pred diff samples'
-                print bbox_pred_d[:,0,:]
-                print bbox_pred_d[:,-1,:]
 
-                # bbox_target =self.solver.net.blobs['bbox_tile_reshape'].data
+                # bbox_target =self.solver.net.blobs['bbox_targets'].data
                 # print 'bbox target samples'
-                # print bbox_target[:,0,:]
-                # print bbox_target[:,-1,:]
-                # cont_tile =self.solver.net.blobs['cont_tile'].data
-                # print 'cont tile samples'
-                # print cont_tile[:,0,:]
-                # print cont_tile[:,-1,:]
-
-                bbox_target =self.solver.net.blobs['bbox_targets'].data
-                print 'bbox target samples'
-                print bbox_target[0,:]
-                print bbox_target[-1,:]
-                bbox_weights = self.solver.net.blobs['bbox_inside_weights'].data
-                print 'bbox inside weights'
-                print bbox_weights[0,:]
-                print bbox_weights[-1,:]
-                # l1_loss = self.solver.net.blobs['loss_bbox'].data
-                # print 'l1_loss'
-                # print l1_loss
-                # input_sentence = self.solver.net.blobs['input_sentence'].data
-                # print 'input labels sample'
-                # print input_sentence[:,:2] 
-                # print 'predicted labels sample'
-                # print predict_labels[:,:2]
-                # target_labels = self.solver.net.blobs['target_sentence'].data
-                # print 'target labels sample'
-                # print target_labels[:,:2] 
-                # predict_probs = softmax(predict_scores)
-                # predict_logprobs = np.log(predict_probs)
-                # target_probs = np.zeros_like(target_labels)
-                # loss = 0
-                # time_steps = target_labels.shape[0]
-                # samples = target_labels.shape[1]
-                # for i in xrange(time_steps):
-                #     for j in xrange(samples):
-                #         if target_labels[i,j] > -1:
-                #             loss += predict_logprobs[i,j,target_labels[i,j]]
-                #             target_probs[i,j] = predict_probs[i,j,target_labels[i,j]]
-                # loss /= np.sum(target_labels > -1)
-                # print 'target probs sample'
-                # print target_probs[:,:2] 
-                # print 'per word loss: %.3f' % loss
-                # word_accuracy = np.sum(predict_labels == target_labels)/np.sum(target_labels > -1)
-                # print 'word accuracy: %.3f' % word_accuracy
+                # print bbox_target[0,:]
+                # print bbox_target[-1,:]
+                # bbox_weights = self.solver.net.blobs['bbox_inside_weights'].data
+                # print 'bbox inside weights'
+                # print bbox_weights[0,:]
+                # print bbox_weights[-1,:]
+              
             if self.solver.iter % (10 * self.solver_param.display) == 0:
                 print 'speed: {:.3f}s / iter'.format(timer.average_time)
             #if self.solver_param.test_interval>0 and self.solver.iter % self.solver_param.test_interval == 0:

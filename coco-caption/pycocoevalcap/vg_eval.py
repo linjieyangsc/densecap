@@ -175,15 +175,25 @@ class VgEvalCap:
       gt_flag = np.ones((gt_n),dtype=np.int32)
       match_ids = -1 * np.ones((model_n),dtype=np.int32) 
       match_ratios = np.zeros((model_n))
+      # modified bbox matching scheme, the same with Justin's code 
       for i in xrange(model_n):
-        overlap_step = overlap_matrix[i,:] * gt_flag 
+        overlap_step = overlap_matrix[i,:] 
         max_overlap_id = np.argmax(overlap_step)
-        if overlap_step[max_overlap_id] > 0:
+        if gt_flag[max_overlap_id] ==1 and overlap_step[max_overlap_id] > 0:
           gt_flag[max_overlap_id] = 0
           match_ratios[i] = overlap_step[max_overlap_id]
           match_ids[i] = max_overlap_id
         else:
           pass
+      # for i in xrange(model_n):
+      #   overlap_step = overlap_matrix[i,:] * gt_flag 
+      #   max_overlap_id = np.argmax(overlap_step)
+      #   if overlap_step[max_overlap_id] > 0:
+      #     gt_flag[max_overlap_id] = 0
+      #     match_ratios[i] = overlap_step[max_overlap_id]
+      #     match_ids[i] = max_overlap_id
+      #   else:
+      #     pass
 
       return match_ids, match_ratios
 

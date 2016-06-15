@@ -886,7 +886,7 @@ layer {
   top: "lstm1"
   propagate_down: 1
   propagate_down: 0
-  include {stage: 1000}
+  include {stage: "lstm-1000"}
   recurrent_param {
     num_output: 1000
     weight_filler { type: "gaussian" std: 0.01 }
@@ -901,7 +901,7 @@ layer {
   top: "lstm1"
   propagate_down: 1
   propagate_down: 0
-  include {stage: 512}
+  include {stage: "lstm-512"}
   recurrent_param {
     num_output: 512
     weight_filler { type: "gaussian" std: 0.01 }
@@ -944,7 +944,7 @@ layer {
   }
   inner_product_param {
     num_output: 4
-   weight_filler { type: "gaussian" std: 0.01 }
+    weight_filler { type: "gaussian" std: 0.01 }
     bias_filler { type: "constant" value: 0 }
     axis: 2
   }

@@ -25,7 +25,7 @@ from run_experiment_vgg_vg import gt_region_merge, get_bbox_coord
 from vg_to_hdf5_data import *
 #sys.path.add('examples/coco-caption')
 #import
-COCO_EVAL_PATH = '/media/researchshare/linjie/data/MS_COCO/coco-caption/'
+COCO_EVAL_PATH = 'coco-caption/'
 sys.path.append(COCO_EVAL_PATH)
 from pycocoevalcap.vg_eval import VgEvalCap
 eps = 1e-10

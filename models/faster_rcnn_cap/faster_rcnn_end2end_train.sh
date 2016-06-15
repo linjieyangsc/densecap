@@ -21,26 +21,28 @@ case $DATASET in
     TRAIN_IMDB="vg_1.0_train"
     TEST_IMDB="vg_1.0_val"
     PT_DIR="faster_rcnn_cap"
-    ITERS=200000
+    FINETUNE_AFTER=200000
+    ITERS=400000
     ;;
   visual_genome_1.2)
     TRAIN_IMDB="vg_1.2_train"
     TEST_IMDB="vg_1.2_val"
     PT_DIR="faster_rcnn_cap"
-    ITERS=200000
+    FINETUNE_AFTER=200000
+    ITERS=400000
     ;;
   *)
     echo "No dataset given"
     exit
     ;;
 esac
-#Training
+# Training
 GLOG_logtostderr=1
 ./lib/tools/train_net.py --gpu ${GPU_ID} \
   --solver models/${PT_DIR}/solver_${MODEL_TYPE}.prototxt \
   --weights ${WEIGHTS} \
   --imdb ${TRAIN_IMDB} \
-  --iters ${ITERS} \
+  --iters ${FINETUNE_AFTER} \
   --cfg models/${PT_DIR}/faster_rcnn_end2end.yml \
   ${EXTRA_ARGS}
 NEW_WEIGHTS=output/faster_rcnn_end2end/vg_train/faster_rcnn_cap_${MODEL_TYPE}_iter_${ITERS}.caffemodel
@@ -49,7 +51,7 @@ NEW_WEIGHTS=output/faster_rcnn_end2end/vg_train/faster_rcnn_cap_${MODEL_TYPE}_it
   --solver models/${PT_DIR}/solver_${MODEL_TYPE}_finetune.prototxt \
   --weights ${NEW_WEIGHTS} \
   --imdb ${TRAIN_IMDB} \
-  --iters ${ITERS} \
+  --iters `expr ${ITERS} - ${FINETUNE_AFTER}` \
   --cfg models/${PT_DIR}/faster_rcnn_end2end.yml \
   ${EXTRA_ARGS}
 
