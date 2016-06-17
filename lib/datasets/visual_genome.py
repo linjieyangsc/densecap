@@ -14,17 +14,13 @@ from fast_rcnn.config import cfg
 DEBUG = False
 USE_CACHE = True
 UNK_IDENTIFIER='<unk>'
-DEVKIT_PATH='models/dense_cap/h5_data_distill/buffer_100'
+DEFAULT_PATH='data/visual_genome'
 class visual_genome(imdb):
     def __init__(self, image_set, version):
         imdb.__init__(self, 'vg_' + image_set)
         self._image_set = image_set
-        if version=='1.0':
-            self._devkit_path = DEVKIT_PATH 
-        else:
-            self._devkit_path = 'models/dense_cap/h5_data_distill2/buffer_100'
-      
-        self._data_path = self._devkit_path
+        
+        self._data_path  = '%s/%s' % (DEFAULT_PATH, version) 
         
         self._image_ext = '.jpg'
         print 'data_path: %s' % self._data_path
@@ -36,12 +32,10 @@ class visual_genome(imdb):
         # Default to roidb handler
         self._roidb_handler = self.rpn_roidb
         self._salt = str(uuid.uuid4())
-        self._comp_id = 'comp4'
         vocab_path = os.path.join(self._data_path,'vocabulary.txt')
         with open(vocab_path,'r') as f:
             self._vocabulary_inverted = [line.strip() for line in f]
-        # insert <eos> tag
-        # self._vocabulary_inverted.insert(0,'<EOS>')
+
         self._vocabulary = dict([(w,i) for i,w in enumerate(self._vocabulary_inverted)])
  
         assert os.path.exists(self._data_path), \
@@ -66,16 +60,16 @@ class visual_genome(imdb):
         """
         Load the indexes listed in this dataset's image set file.
         """
-        # Example path to image set file:
-        # self._devkit_path + /VOCdevkit2007/VOC2007/ImageSets/Main/val.txt
         image_index = [key for key in self._gt_regions]
         
         return image_index
         
     def get_gt_regions(self):
         return [v for k,v in self._gt_regions.iteritems()]
+
     def get_gt_regions_index(self, index):
         return self._gt_regions[index]
+
     def get_vocabulary(self):
         return self._vocabulary_inverted
 
@@ -180,27 +174,6 @@ class visual_genome(imdb):
                 'gt_overlaps' : overlaps,
                 'flipped' : False,
                 'seg_areas' : seg_areas}
-
-    def _get_comp_id(self):
-        comp_id = (self._comp_id + '_' + self._salt if self.config['use_salt']
-            else self._comp_id)
-        return comp_id
-
-    def _get_vg_results_file_template(self):
-        # VOCdevkit/results/VOC2007/Main/<comp_id>_det_test_aeroplane.txt
-        filename = self._get_comp_id() + '_dense_cap_' + self._image_set + '.txt'
-        path = os.path.join(
-            self._devkit_path,
-            'results',
-            filename)
-        return path
-
-
-    
-
-   
-
-   
 
 
 if __name__ == '__main__':
