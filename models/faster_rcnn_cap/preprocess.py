@@ -1,15 +1,12 @@
 #!/usr/bin/env python
-import nltk
 import itertools
-from hashlib import sha1
 import os
-import random
-random.seed(3)
 import re
 import sys
 import json
 import time
 import numpy as np
+import Counter
 VG_VERSION='1.2'
 VG_PATH = '/home/ljyang/work/data/visual_genome'
 VG_IMAGE_ROOT = '%s/images' % VG_PATH
@@ -22,8 +19,16 @@ punct_list = ['.','?','!']
 # Remove punctuations or not
 REMOVE_PUNCT=True
 OUTPUT_DIR = 'data/visual_genome/%s' % VG_VERSION
+
 # UNK_IDENTIFIER is the word used to identify unknown words
 UNK_IDENTIFIER = '<unk>'
+
+SENTENCE_SPLIT_REGEX = re.compile(r'(\W+)')
+
+def split_sentence(sentence):
+	# break sentence into a list of words and punctuation
+	sentence = [s.lower() for s in SENTENCE_SPLIT_REGEX.split(sentence.strip()) if len(s.strip()) > 0]
+	return sentence
 
 MAX_WORDS = 10
 
@@ -65,7 +70,7 @@ class VGDataProcessor:
 				if (len(phrase)==0):
 					num_empty_phrase += 1
 					continue
-				obj['phrase_tokens'] = nltk.word_tokenize(phrase)
+				obj['phrase_tokens'] = split_sentence(phrase)
 				# remove regions with caption longer than max_words
 				if len(obj['phrase_tokens']) > max_words:
 					continue
@@ -84,9 +89,9 @@ class VGDataProcessor:
 		for index, word in enumerate(self.vocabulary_inverted):
 			self.vocabulary[word] = index
 
-	def init_vocabulary(self, phrases_all, min_count=15):
+	def init_vocabulary(self, phrases_all):
 		words_to_count = {}
-		word_freq = nltk.FreqDist(itertools.chain(*phrases_all))
+		word_freq = Counter(itertools.chain(*phrases_all))
 		print "Found %d unique word tokens." % len(word_freq.items())
 		vocab_freq = word_freq.most_common(vocabulary_size-1)
 		self.vocabulary_inverted = [x[0] for x in vocab_freq]
