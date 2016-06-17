@@ -1,32 +1,24 @@
 #!/usr/bin/env python
 import itertools
 import os
-import re
+import string
 import sys
 import json
 import time
 import numpy as np
 from collections import Counter 
-VG_VERSION='1.0'
+VG_VERSION='1.2'
 VG_PATH = '/home/ljyang/work/data/visual_genome'
 VG_IMAGE_ROOT = '%s/images' % VG_PATH
 VG_REGION_PATH = '%s/%s/region_descriptions.json' % (VG_PATH,VG_VERSION)
 VG_METADATA_PATH = '%s/%s/image_data.json' % (VG_PATH,VG_VERSION)
 vocabulary_size = 10000#10497#from dense caption paper
 
-# punctuations to be removed
-punct_list = ['.','?','!']
 OUTPUT_DIR = 'data/visual_genome/%s' % VG_VERSION
 
 # UNK_IDENTIFIER is the word used to identify unknown words
 UNK_IDENTIFIER = '<unk>'
 
-SENTENCE_SPLIT_REGEX = re.compile(r'(\W+)')
-
-def split_sentence(sentence):
-	# break sentence into a list of words and punctuation
-	sentence = [s.lower() for s in SENTENCE_SPLIT_REGEX.split(sentence.strip()) if len(s.strip()) > 0]
-	return sentence
 
 MAX_WORDS = 10
 
@@ -66,10 +58,8 @@ class VGDataProcessor:
 				if (len(phrase)==0):
 					num_empty_phrase += 1
 					continue
-				# remove punctuation
-				if phrase[-1] in punct_list:
-					phrase = phrase[:-1]
-				obj['phrase_tokens'] = split_sentence(phrase)
+
+				obj['phrase_tokens'] = phrase.translate(None, string.punctuation).split()
 				# remove regions with caption longer than max_words
 				if len(obj['phrase_tokens']) > max_words:
 					continue
