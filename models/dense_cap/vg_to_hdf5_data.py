@@ -11,11 +11,12 @@ import json
 sys.path.append('./examples/coco_caption/')
 import time
 import numpy as np
+VG_VERSION='1.2'
 VG_PATH = '/home/ljyang/work/data/visual_genome'
 #COCO_TOOL_PATH = '%s/coco/PythonAPI/' % COCO_PATH
 VG_IMAGE_ROOT = '%s/images' % VG_PATH
-VG_REGION_PATH = '%s/region_descriptions.json' % VG_PATH
-VG_METADATA_PATH = '%s/image_data.json' % VG_PATH
+VG_REGION_PATH = '%s/%s/region_descriptions.json' % (VG_VERSION, VG_PATH)
+VG_METADATA_PATH = '%s/%s/image_data.json' % (VG_VERSION, VG_PATH)
 MAX_HASH = 100000
 vocabulary_size = 10000#10497#from dense caption paper
 #sys.path.append(COCO_TOOL_PATH)
@@ -29,7 +30,7 @@ punct_list = ['.','?','!']
 REMOVE_PUNCT=True
 # preload vocabulary or not
 PRELOAD_VOCAB=False
-BASE_DIR = 'models/dense_cap/h5_data_distill2'
+BASE_DIR = 'data/visual_genome/%s' % VG_VERSION
 
 VOCAB_PATH = '%s/buffer_100/vocabulary.txt' % BASE_DIR
 from hdf5_sequence_generator2 import SequenceGenerator, HDF5SequenceWriter
