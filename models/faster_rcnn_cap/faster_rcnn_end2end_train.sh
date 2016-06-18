@@ -45,7 +45,7 @@ GLOG_logtostderr=1
   --iters ${FINETUNE_AFTER} \
   --cfg models/${PT_DIR}/faster_rcnn_end2end.yml \
   ${EXTRA_ARGS}
-NEW_WEIGHTS=output/faster_rcnn_end2end/vg_train/faster_rcnn_cap_${MODEL_TYPE}_iter_${ITERS}.caffemodel
+NEW_WEIGHTS=output/faster_rcnn_end2end/vg_train/faster_rcnn_cap_${MODEL_TYPE}_iter_${FINETUNE_AFTER}.caffemodel
 # Finetuning
 ./lib/tools/train_net.py --gpu ${GPU_ID} \
   --solver models/${PT_DIR}/solver_${MODEL_TYPE}_finetune.prototxt \
