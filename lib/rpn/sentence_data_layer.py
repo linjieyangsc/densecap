@@ -14,7 +14,6 @@ class SentenceDataLayer(caffe.Layer):
     """This python layer accepts region ids as input and retrieves region sentences for them."""
 
 
-
     def setup(self, bottom, top):
         """Setup the SentenceDataLayer."""
 
@@ -29,6 +28,7 @@ class SentenceDataLayer(caffe.Layer):
         if DEBUG:
             all_len = [len(stream) for k,stream in self._all_phrases.iteritems()]
             count_len = Counter(all_len)
+            print 'distribution of caption length'
             print count_len
         #all_regions is a dict from region id to caption stream
         assert(len(bottom) == 1) #only one bottom: labels (region ids)

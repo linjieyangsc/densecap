@@ -49,7 +49,10 @@ class VGDataProcessor:
 			regions_filt = []
 			for obj in item['regions']:
 				# remove invalid regions
-				if obj['width'] == 0 or obj['height'] ==0:
+				if obj['x'] < 0 or obj['y'] < 0 or \
+				 obj['width'] <= 0 or obj['height'] <=0 or \
+				 obj['x'] + obj['width'] >= image_info['width'] or \
+				 obj['y'] + obj['height'] >= image_info['height']:
 					num_invalid_bbox += 1
 					continue
 				phrase  = obj['phrase'].strip().encode('ascii','ignore').lower()

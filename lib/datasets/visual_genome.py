@@ -26,6 +26,7 @@ class visual_genome(imdb):
         print 'data_path: %s' % self._data_path
         region_imset_path = os.path.join(self._data_path, '%s_gt_regions.json' % image_set)
         self._classes = ('__background__', '__foreground__')
+        print 'loading from %s' % region_imset_path
         self._gt_regions = json.load(open(region_imset_path))
         #print self._gt_regions.items()[0]
         self._image_index = self._load_image_set_index()
@@ -161,14 +162,13 @@ class visual_genome(imdb):
             y1 = reg['y']
             x2 = reg['x'] + reg['width']
             y2 = reg['y'] + reg['height']
-            
+
             boxes[ix, :] = [x1, y1, x2, y2]
             gt_classes[ix] = reg['id']#replace the class id with region id so that can retrieve the caption later
             overlaps[ix, 1] = 1.0
             seg_areas[ix] = (x2 - x1 + 1) * (y2 - y1 + 1)
 
         overlaps = scipy.sparse.csr_matrix(overlaps)
- 
         return {'boxes' : boxes,
                 'gt_classes': gt_classes,
                 'gt_overlaps' : overlaps,
