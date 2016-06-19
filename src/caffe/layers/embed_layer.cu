@@ -19,7 +19,9 @@ __global__ void EmbedForward(const int nthreads, const Dtype* bottom_data,
     const int d = top_index % N;
     const int index = static_cast<int>(bottom_data[n]);
     const int weight_index = index * N + d;
-    top_data[top_index] = weight[weight_index];
+    if (weight_index >= 0) {
+      top_data[top_index] = weight[weight_index];
+    }
   }
 }
 
@@ -37,7 +39,9 @@ __global__ void EmbedBackward(const int nthreads, const Dtype* bottom_data,
     const int d = top_index % N;
     const int index = static_cast<int>(bottom_data[n]);
     const int weight_index = index * N + d;
-    caffe_gpu_atomic_add(top_diff[top_index], weight_diff + weight_index);
+    if (weight_index >= 0) {
+      caffe_gpu_atomic_add(top_diff[top_index], weight_diff + weight_index);
+    }
   }
 }
 
