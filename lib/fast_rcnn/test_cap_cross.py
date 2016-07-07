@@ -127,12 +127,15 @@ def _greedy_search(embed_net, recurrent_net, offset_net, recurrent_args, offset_
 
    
     recurrent_args['cont_sentence'] = np.zeros((1,proposal_n))
-    
+    im_feats = recurrent_args['image_features']
+    # remove the first dimension
+    recurrent_args['image_features'] = im_feats.reshape(im_feats.shape[1:])
     input_sentence = np.zeros((1,proposal_n)) # start with EOS
     # reshape blobs
     for k, v in recurrent_args.iteritems():
         recurrent_net.blobs[k].reshape(*(v.shape))
-    recurrent_net.blobs['input_features'].reshape(*(recurrent_args['image_features'].shape))
+
+    recurrent_net.blobs['input_features'].reshape(*(recurrent_args['offset_features'].shape))
     
     for k, v in offset_args.iteritems():
         offset_net.blobs[k].reshape(*(v.shape))
@@ -157,7 +160,7 @@ def _greedy_search(embed_net, recurrent_net, offset_net, recurrent_args, offset_
 
         offset_args['bbox_pred'] = bbox_pred
         blobs_out_offset = offset_net.forward(**offset_args)
-        recurrent_args['image_features'][...] = blobs_out_offset['image_features']
+        recurrent_args['offset_features'][...] = blobs_out_offset['image_features']
         offset_args['rois'][...] = offset_net.blobs['rois_offset'].data
         for i, w in zip(range(proposal_n), best_words):
             if not pred_captions[i]:
@@ -213,7 +216,7 @@ def im_detect(feature_net, embed_net, recurrent_net, offset_net, im, boxes=None)
     conv_features = feature_net.blobs['conv5_3'].data.copy()
     #boxes = rois[:, 1:5] / im_scales[0]
     proposal_n = rois.shape[0]
-    feat_args = {'image_features': region_features}
+    feat_args = {'image_features': region_features, 'offset_features': region_features.copy()}
     offset_args = {'rois':rois, 'im_info':blobs['im_info'], 'conv_features':conv_features}
     # use rpn scores, combine with caption score later
     scores = feature_net.blobs['cls_probs'].data[:,1].copy()

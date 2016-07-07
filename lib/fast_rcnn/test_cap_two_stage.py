@@ -116,7 +116,7 @@ def _get_blobs(im, rois):
     if not cfg.TEST.HAS_RPN:
         blobs['rois'] = _get_rois_blob(rois, im_scale_factors)
     return blobs, im_scale_factors
-def _greedy_search(embed_net, recurrent_net, forward_args, proposal_n, max_timestep = 12, bbox_pred_direct = True, im_first=True):
+def _greedy_search(embed_net, recurrent_net, forward_args, optional_args, proposal_n, max_timestep = 15, pred_bbox = True):
     """Do greedy search to find the regions and captions"""
     # Data preparation
 
@@ -124,40 +124,61 @@ def _greedy_search(embed_net, recurrent_net, forward_args, proposal_n, max_times
     pred_captions = [None] * proposal_n
     pred_logprobs = [0.0] * proposal_n
     pred_bbox_offsets = np.zeros((proposal_n, 4))
-    # first time step - image features
-    if 'image_features' in recurrent_net.blobs:
-        forward_args['image_features'] = forward_args['input_features'].copy()
-        if not im_first:
-            im_feats = forward_args['image_features']
-            # remove the first dimension
-            forward_args['image_features'] = im_feats.reshape(im_feats.shape[1:])
-    #forward_args['']
+
+
+    
     forward_args['cont_sentence'] = np.zeros((1,proposal_n))
-    
-    input_sentence = np.zeros((1,proposal_n)) # start with EOS
-    # reshape blobs
-    for k, v in forward_args.iteritems():
-        if DEBUG:
-            print 'shape of %s is ' % k
-            print v.shape
-        recurrent_net.blobs[k].reshape(*(v.shape))
-    
-    
-    embed_net.blobs['input_sentence'].reshape(1, proposal_n)
-    if im_first:
+    #optional global feature as first input
+    if 'global_features' in optional_args and not 'global_features' in recurrent_net.blobs:
+        region_features = forward_args['input_features'].copy()
+        forward_args['input_features'] = optional_args['global_features'].reshape(*(forward_args['input_features'].shape))
+        
+        # reshape blobs
+        for k, v in forward_args.iteritems():
+            if DEBUG:
+                print 'shape of %s is ' % k
+                print v.shape
+            recurrent_net.blobs[k].reshape(*(v.shape))
         recurrent_net.forward(**forward_args)
         forward_args['cont_sentence'][:] = 1
+        forward_args['input_features'] = region_features
+    elif 'global_features' in optional_args:
+        forward_args['global_features'] = optional_args['global_features'].reshape(*(forward_args['input_features'].shape))
+        # reshape blobs
+        for k, v in forward_args.iteritems():
+            if DEBUG:
+                print 'shape of %s is ' % k
+                print v.shape
+            recurrent_net.blobs[k].reshape(*(v.shape))
+    else:
+        # reshape blobs
+        for k, v in forward_args.iteritems():
+            if DEBUG:
+                print 'shape of %s is ' % k
+                print v.shape
+            recurrent_net.blobs[k].reshape(*(v.shape))
+
+    recurrent_net.forward(**forward_args)
+    forward_args['cont_sentence'][:] = 1
+
+    input_sentence = np.zeros((1,proposal_n)) # start with EOS    
+    embed_net.blobs['input_sentence'].reshape(1, proposal_n) 
+    
     for step in xrange(max_timestep):
+        
         embed_out = embed_net.forward(input_sentence=input_sentence)
         forward_args['input_features'] = embed_out['embedded_sentence']
+        # another lstm for global features
+        if 'global_features' in recurrent_net.blobs:
+            forward_args['global_features'] =  embed_out['embedded_sentence']
         blobs_out = recurrent_net.forward(**forward_args)
 
         word_probs = blobs_out['probs'].copy()
-        bbox_pred = blobs_out['bbox_pred'] if not bbox_pred_direct else None
+        bbox_pred = blobs_out['bbox_pred'] if pred_bbox else None
         #suppress <unk> tag
         #word_probs[:,:,1] = 0
         best_words = word_probs.argmax(axis = 2).reshape(proposal_n)
-        
+        finish_n = 0
         for i, w in zip(range(proposal_n), best_words):
             if not pred_captions[i]:
                 pred_captions[i] = [w]
@@ -165,9 +186,14 @@ def _greedy_search(embed_net, recurrent_net, forward_args, proposal_n, max_times
             elif pred_captions[i][-1] != 0:
                 pred_captions[i].append(w)
                 pred_logprobs[i] += math.log(word_probs[0,i,w])
-                pred_bbox_offsets[i,:] = bbox_pred[0,i,:] if not bbox_pred_direct else 0
+                pred_bbox_offsets[i,:] = bbox_pred[0,i,:] if pred_bbox else 0
+            else:
+                finish_n += 1
         input_sentence[:] = best_words
         forward_args['cont_sentence'][:] = 1
+        if finish_n == proposal_n:
+            break
+
     return pred_captions, pred_bbox_offsets, pred_logprobs
 
 def im_detect(feature_net, embed_net, recurrent_net, im, boxes=None):
@@ -210,25 +236,31 @@ def im_detect(feature_net, embed_net, recurrent_net, im, boxes=None):
     feature_net.forward(data = im_blob, im_info = blobs['im_info'])
     region_features = feature_net.blobs['region_features'].data.copy()
     rois = feature_net.blobs['rois'].data.copy()
-
+    # detection scores
+    scores = feature_net.blobs['cls_probs'].data[:,1].copy()
+    # proposal boxes
     boxes = rois[:, 1:5] / im_scales[0]
     proposal_n = rois.shape[0]
     feat_args = {'input_features': region_features}
+    opt_args = {}
+    # global feature as an optional input: context
+    if 'global_features' in feature_net.blobs:
+        opt_args['global_features'] = np.tile(feature_net.blobs['global_features'].data, (proposal_n,1))
     
-    # use rpn scores, combine with caption score later
-    scores = feature_net.blobs['cls_probs'].data[:,1].copy()
+    # constant image features as an optional input
+    if 'image_features' in recurrent_net.blobs:
+        forward_args['image_features'] = region_features.copy()
+    
     bbox_pred_direct = ('bbox_pred' in feature_net.blobs)
-    #print recurrent_net.params['lstm1']
-    # use the number of input to lstm1 to determine the image feature mode to the lstm (first or all)
-    im_first = (len(recurrent_net.params['lstm1']) == 3)
+
     if bbox_pred_direct:
         # do greedy search
-        captions, _, logprobs = _greedy_search(embed_net, recurrent_net, feat_args, proposal_n, bbox_pred_direct=bbox_pred_direct, im_first=im_first)
+        captions, _, logprobs = _greedy_search(embed_net, recurrent_net, feat_args, opt_args, proposal_n, pred_bbox = not bbox_pred_direct)
         #bbox target unnormalization
         box_offsets = feature_net.blobs['bbox_pred'].data
     else:
 
-        captions, box_offsets, logprobs = _greedy_search(embed_net, recurrent_net, feat_args, proposal_n, bbox_pred_direct=bbox_pred_direct, im_first=im_first)
+        captions, box_offsets, logprobs = _greedy_search(embed_net, recurrent_net, feat_args, opt_args, proposal_n, pred_bbox = not bbox_pred_direct)
    
     #bbox target unnormalization
     box_deltas = box_offsets * bbox_stds + bbox_mean
@@ -263,30 +295,7 @@ def vis_detections(im_path, im, captions, dets, thresh=0.6, save_path='vis'):
     page.write('<hr>')
     page.close() 
         
-        
-            
-
-def apply_nms(all_boxes, thresh):
-    """Apply non-maximum suppression to all predicted boxes output by the
-    test_net method.
-    """
-    num_classes = len(all_boxes)
-    num_images = len(all_boxes[0])
-    nms_boxes = [[[] for _ in xrange(num_images)]
-                 for _ in xrange(num_classes)]
-    for cls_ind in xrange(num_classes):
-        for im_ind in xrange(num_images):
-            dets = all_boxes[cls_ind][im_ind]
-            if dets == []:
-                continue
-            # CPU NMS is much faster than GPU NMS when the number of boxes
-            # is relative small (e.g., < 10k)
-            # TODO(rbg): autotune NMS dispatch
-            keep = nms(dets, thresh, force_cpu=True)
-            if len(keep) == 0:
-                continue
-            nms_boxes[cls_ind][im_ind] = dets[keep, :].copy()
-    return nms_boxes
+    
 
 def sentence(vocab, vocab_indices):
     # consider <eos> tag with id 0 in vocabulary

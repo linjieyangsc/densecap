@@ -24,17 +24,17 @@ class ProposalTargetLayer(caffe.Layer):
         layer_params = yaml.load(self.param_str_)
 
         # sampled rois (0, x1, y1, x2, y2)
-        top[0].reshape(1, 5)
+        top[0].reshape(cfg.TRAIN.BATCH_SIZE, 5)
         # labels
-        top[1].reshape(1, 1)
+        top[1].reshape(cfg.TRAIN.BATCH_SIZE, 1)
         # bbox_targets
-        top[2].reshape(1, 4)
+        top[2].reshape(cfg.TRAIN.BATCH_SIZE, 4)
 
         if len(top) > 3:
-            top[3].reshape(1,4)
-            top[4].reshape(1,4)
+            top[3].reshape(cfg.TRAIN.BATCH_SIZE,4)
+            top[4].reshape(cfg.TRAIN.BATCH_SIZE,4)
         if len(top) > 5:
-            top[5].reshape(1,1)
+            top[5].reshape(cfg.TRAIN.BATCH_SIZE,1)
     def forward(self, bottom, top):
         # Proposal ROIs (0, x1, y1, x2, y2) coming from RPN
         # (i.e., rpn.proposal_layer.ProposalLayer), or any other source

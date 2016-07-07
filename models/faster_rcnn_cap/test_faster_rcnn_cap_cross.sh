@@ -1,4 +1,4 @@
-GPU_ID=3
+GPU_ID=1
 NET_FINAL=output/faster_rcnn_end2end/vg_train/faster_rcnn_cap_two_stage_cross_finetune_iter_200000.caffemodel
 TEST_IMDB="vg_1.0_test"
 PT_DIR="faster_rcnn_cap"
