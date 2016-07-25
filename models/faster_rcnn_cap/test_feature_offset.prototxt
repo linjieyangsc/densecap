@@ -1,0 +1,112 @@
+name: "feature_offset"
+input: "rois"
+input_shape {
+  dim: 1
+  dim: 5
+}
+
+input: "bbox_pred"
+input_shape {
+  dim: 1
+  dim: 1
+  dim: 4
+}
+input: "im_info"
+input_shape {
+  dim: 1
+  dim: 3
+}
+input: "conv_features"
+input_shape {
+  dim: 1
+  dim: 512
+  dim: 10
+  dim: 10
+}
+
+layer {
+  name: "rois_offset"
+  type: "Python"
+  bottom: "bbox_pred"
+  bottom: "rois"
+  bottom: "im_info"
+  top: "rois_offset"
+  python_param {
+    module: 'rpn.rois_offset_layer'
+    layer: 'RoisOffsetLayer'
+    param_str: "" 
+  }
+}
+
+
+# extract pooled feature of predicted rois
+layer {
+  name: "pool5_offset"
+  type: "ROIPooling"
+  bottom: "conv_features"
+  bottom: "rois_offset"
+  top: "pool5_offset"
+  roi_pooling_param {
+    pooled_w: 7
+    pooled_h: 7
+    spatial_scale: 0.0625 # 1/16
+  }
+}
+layer {
+  name: "fc6"
+  type: "InnerProduct"
+  bottom: "pool5_offset"
+  top: "fc6"
+
+  inner_product_param {
+    num_output: 4096
+  }
+}
+layer {
+  name: "relu6"
+  type: "ReLU"
+  bottom: "fc6"
+  top: "fc6"
+}
+layer {
+  name: "drop6"
+  type: "Dropout"
+  bottom: "fc6"
+  top: "fc6"
+  dropout_param {
+    dropout_ratio: 0.5
+  }
+}
+layer {
+  name: "fc7"
+  type: "InnerProduct"
+  bottom: "fc6"
+  top: "fc7"
+  inner_product_param {
+    num_output: 4096
+  }
+}
+layer {
+  name: "relu7"
+  type: "ReLU"
+  bottom: "fc7"
+  top: "fc7"
+}
+layer {
+  name: "drop7"
+  type: "Dropout"
+  bottom: "fc7"
+  top: "fc7"
+  dropout_param {
+    dropout_ratio: 0.5
+  }
+}
+layer {
+  name: "fc8"
+  type: "InnerProduct"
+  bottom: "fc7"
+  top: "image_features"
+  inner_product_param {
+    num_output: 1000
+  }
+}
