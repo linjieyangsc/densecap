@@ -9,10 +9,10 @@ random.seed(3)
 
 sys.path.append('./examples/coco_caption/')
 from hdf5_sequence_generator import SequenceGenerator, HDF5SequenceWriter
-vocabulary_size = 10000
+vocabulary_size = 15000
 UNK_IDENTIFIER = "<unk>"#follow the coco routine
 
-			      
+IMAGE_FIRST=True			      
 MAX_WORDS = 20
 MAX_HASH = 100000
 
@@ -93,14 +93,25 @@ class DtSequenceGenerator(SequenceGenerator):
 	def get_streams(self):
 		image_filename, line = self.image_sentence_pairs[self.index]
 		stream = self.line_to_stream(line)
-		pad = self.max_words - (len(stream) + 1) if self.pad else 0
-		if pad > 0: self.num_pads += 1
 		self.num_outs += 1
 		out = {}
-		out['stage_indicators'] = [1] * (len(stream) + 1) + [0] * pad
-		out['cont_sentence'] = [0] + [1] * len(stream) + [0] * pad
-		out['input_sentence'] = [0] + stream + [-1] * pad
-		out['target_sentence'] = stream + [0] + [-1] * pad
+		if not IMAGE_FIRST:
+			pad = self.max_words - (len(stream) + 1) if self.pad else 0
+			if pad > 0: self.num_pads += 1
+			
+			out['stage_indicators'] = [1] * (len(stream) + 1) + [0] * pad
+			out['cont_sentence'] = [0] + [1] * len(stream) + [0] * pad
+			out['input_sentence'] = [0] + stream + [-1] * pad
+			out['target_sentence'] = stream + [0] + [-1] * pad
+		else:
+			# using image feature at the first time step, 
+			# need to replace the first item of input_sentence with image features in the network
+			pad = self.max_words - (len(stream) + 2) if self.pad else 0
+			if pad > 0: self.num_pads += 1
+			out['stage_indicators'] = [1] * (len(stream) + 2) + [0] * pad
+			out['cont_sentence'] = [0] + [1] * (len(stream) + 1) + [0] * pad
+			out['input_sentence'] = [0] + [0] + stream + [-1] * pad
+			out['target_sentence'] = [-1] + stream + [0] + [-1] * pad
 		truncated = False
 		if self.truncate:
 			for key, val in out.iteritems():
@@ -121,10 +132,13 @@ class DtSequenceGenerator(SequenceGenerator):
 
 
 #
-BUFFER_SIZE=50
-OUTPUT_DIR = './models/lstm/h5_data_distill/buffer_%d' % (BUFFER_SIZE)
-SPLITS_PATTERN = '/home/a-linjieyang/work/video_caption/dreamstime/%s_list.txt'
-SPLITS_CAP_PATTERN = '/home/a-linjieyang/work/video_caption/dreamstime/%s_list_cap_filt.txt'
+BUFFER_SIZE=100
+if not IMAGE_FIRST:
+	OUTPUT_DIR = './models/lstm/h5_data_distill/buffer_%d' % (BUFFER_SIZE)
+else:
+	OUTPUT_DIR = './models/lstm/h5_data_distill2/buffer_%d' % (BUFFER_SIZE)
+SPLITS_PATTERN = '/media/researchshare/linjie/work/video_caption/captioning/%s_list_all.txt'
+SPLITS_CAP_PATTERN = '/media/researchshare/linjie/work/video_caption/captioning/%s_list_cap_all.txt'
 OUTPUT_DIR_PATTERN = '%s/%%s_batches' % OUTPUT_DIR
 VOCAB_OUT_PATH = './models/lstm/h5_data_distill/buffer_100/vocabulary' 
 def process_dataset(split_name, dt_split_name, batch_stream_length, vocab=None):
@@ -146,7 +160,7 @@ def process_dataset(split_name, dt_split_name, batch_stream_length, vocab=None):
 			#cPickle.dump(sg.vocabulary,fb)
 			#cPickle.dump(sg.vocabulary_inverted,fb)
 	return sg.vocabulary_inverted
-def process_dreamstime():
+def process_dt():
 	vocab=None
 	vocab = []
 	with open(VOCAB_OUT_PATH,'r') as f:
@@ -160,4 +174,4 @@ def process_dreamstime():
 		vocab = process_dataset(split_name, dt_split_name, batch_stream_length,
 			vocab = vocab)
 if __name__ == "__main__":
-	process_dreamstime()
+	process_dt()
