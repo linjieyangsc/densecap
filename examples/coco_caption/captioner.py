@@ -3,7 +3,7 @@
 from collections import OrderedDict
 import h5py
 import math
-import matplotlib.pyplot as plt
+from PIL import Image
 import numpy as np
 import os
 import random
@@ -61,7 +61,7 @@ class Captioner():
 
   def preprocess_image(self, image, verbose=False):
     if type(image) in (str, unicode):
-      image = plt.imread(image)
+      image = np.array(Image.open(image))
     crop_edge_ratio = (256. - 227.) / 256. / 2
     ch = int(image.shape[0] * crop_edge_ratio + 0.5)
     cw = int(image.shape[1] * crop_edge_ratio + 0.5)

@@ -3,8 +3,7 @@
 from collections import OrderedDict
 import h5py
 import math
-import matplotlib.pyplot as plt
-#import cv2
+from PIL import Image
 import numpy as np
 import os
 import random
@@ -65,14 +64,15 @@ class Captioner():
 
   def preprocess_image(self, image, verbose=False):
     if type(image) in (str, unicode):
-      image = plt.imread(image)
+      image = np.array(Image.open(image))
       #print type(image)
       #transform opencv image to matplotlib format
       #image = image[::-1,:,::-1]
-    crop_edge_ratio = (256. - 227.) / 256. / 2
-    ch = int(image.shape[0] * crop_edge_ratio + 0.5)
-    cw = int(image.shape[1] * crop_edge_ratio + 0.5)
-    cropped_image = image[ch:-ch, cw:-cw]
+    # crop_edge_ratio = (256. - 227.) / 256. / 2
+    # ch = int(image.shape[0] * crop_edge_ratio + 0.5)
+    # cw = int(image.shape[1] * crop_edge_ratio + 0.5)
+    # cropped_image = image[ch:-ch, cw:-cw]
+    cropped_image = image
     if len(cropped_image.shape) == 2:
       cropped_image = np.tile(cropped_image[:, :, np.newaxis], (1, 1, 3))
     preprocessed_image = self.transformer.preprocess('data', cropped_image)
@@ -170,15 +170,17 @@ class Captioner():
           probs = self.predict_single_word_from_all_previous(descriptor, beam)
         assert len(probs.shape) == 1
         assert probs.shape[0] == len(self.vocab)
+        if REMOVE_UNK:
+          probs[1] = 0.0
         expansion_inds = probs.argsort()[-beam_size:]
         for ind in expansion_inds:
-          if not (REMOVE_UNK and ind==1):
-            assert(self.vocab[ind] !='<unk>')
-            prob = probs[ind]
-            extended_beam_log_prob = beam_log_prob + math.log(prob)
-            exp = {'prefix_beam_index': beam_index, 'extension': [ind],
-	       'prob_extension': [prob], 'log_prob': extended_beam_log_prob}
-            expansions.append(exp)
+          
+          assert(self.vocab[ind] !='<unk>')
+          prob = probs[ind]
+          extended_beam_log_prob = beam_log_prob + math.log(prob)
+          exp = {'prefix_beam_index': beam_index, 'extension': [ind],
+       'prob_extension': [prob], 'log_prob': extended_beam_log_prob}
+          expansions.append(exp)
       # Sort expansions in decreasing order of probability.
       expansions.sort(key=lambda expansion: -1 * expansion['log_prob'])
       expansions = expansions[:beam_size]
