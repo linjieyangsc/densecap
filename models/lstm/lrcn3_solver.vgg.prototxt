@@ -8,19 +8,14 @@ net: "./models/lstm/lrcn3.vgg.prototxt"
 # To use a different variant, modify the states (train_state, test_state)
 # below as appropriate:
 
-train_state: { stage: 'freeze-convnet' stage: 'factored' stage: '2-layer' }
-# test_iter: 25
-# test_state: { stage: 'freeze-convnet' stage: 'factored' stage: '2-layer' stage: 'test-on-train' }
-# test_iter: 25
-# test_state: { stage: 'freeze-convnet' stage: 'factored' stage: '2-layer' stage: 'test-on-val' }
-# test_interval: 1000
+train_state: { stage: 'freeze-convnet'}
 base_lr: 0.01
 lr_policy: "step"
 gamma: 0.5
 stepsize: 100000
 display: 20
-max_iter: 400000
-momentum: 0.9
+max_iter: 300000
+momentum: 0.95
 weight_decay: 0.0000
 snapshot: 50000
 snapshot_prefix: "./models/lstm/lrcn3_vgg"

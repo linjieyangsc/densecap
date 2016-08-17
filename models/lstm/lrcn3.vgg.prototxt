@@ -22,10 +22,11 @@ layer {
     mean_value: 123
   }
   image_data_param {
-    source: "/home/a-linjieyang/work/video_caption/dreamstime/train_list.txt"
+    source: "/media/researchshare/linjie/work/video_caption/captioning/train_list_all.txt"
     batch_size: 100
     new_height: 256
     new_width: 256
+
   }
 }
 layer {
@@ -36,51 +37,13 @@ layer {
   top: "target_sentence"
   include { phase: TRAIN }
   hdf5_data_param {
-    source: "./models/lstm/h5_data_distill/buffer_100_vocab_15000/train_20_batches/hdf5_chunk_list.txt"
+    source: "./models/lstm/h5_data_distill2/buffer_100/train_20_batches/hdf5_chunk_list.txt"
     batch_size: 20
   }
 }
 
 # trainval data layers (for finetuning final model)
-# test on train data layers
-layer {
-  name: "data"
-  type: "ImageData"
-  top: "data"
-  top: "label"
-  include {
-    phase: TEST
-    stage: "test-on-train"
-  }
-  transform_param {
-    mirror: true
-    crop_size: 224
-    mean_value: 104
-    mean_value: 117
-    mean_value: 123
-  }
-  image_data_param {
-    source: "/home/a-linjieyang/work/video_caption/dreamstime/train_list.txt"
-    batch_size: 100
-    new_height: 256
-    new_width: 256
-  }
-}
-layer {
-  name: "data"
-  type: "HDF5Data"
-  top: "cont_sentence"
-  top: "input_sentence"
-  top: "target_sentence"
-  include {
-    phase: TEST
-    stage: "test-on-train"
-  }
-  hdf5_data_param {
-    source: "./models/lstm/h5_data_distill/buffer_100_vocab_15000/train_20_batches/hdf5_chunk_list.txt"
-    batch_size: 20
-  }
-}
+
 
 # test on val data layers
 layer {
@@ -90,7 +53,6 @@ layer {
   top: "label"
   include {
     phase: TEST
-    stage: "test-on-val"
   }
   transform_param {
     mirror: true
@@ -100,7 +62,7 @@ layer {
     mean_value: 123
   }
   image_data_param {
-    source: "/home/a-linjieyang/work/video_caption/dreamstime/val_list.txt"
+    source: "/media/researchshare/linjie/work/video_caption/captioning/val_list_all.txt"
     batch_size: 100
     new_height: 256
     new_width: 256
@@ -117,7 +79,7 @@ layer {
     stage: "test-on-val"
   }
   hdf5_data_param {
-    source: "./models/lstm/h5_data_distill/buffer_100_vocab_15000/val_20_batches/hdf5_chunk_list.txt"
+    source: "./models/lstm/h5_data_distill2/buffer_100/val_20_batches/hdf5_chunk_list.txt"
     batch_size: 20
   }
 }
@@ -146,8 +108,8 @@ layer {
   type: "Convolution"
   bottom: "data"
   top: "conv1_1"
-  param { lr_mult: 0.1 }
-  param { lr_mult: 0.2 decay_mult: 0}
+  param { lr_mult: 0 }
+  param { lr_mult: 0 decay_mult: 0}
   exclude { stage: "freeze-convnet" }
   convolution_param {
     num_output: 64
@@ -180,8 +142,8 @@ layer {
   type: "Convolution"
   bottom: "conv1_1"
   top: "conv1_2"
-  param { lr_mult: 0.1 }
-  param { lr_mult: 0.2 decay_mult: 0}
+  param { lr_mult: 0 }
+  param { lr_mult: 0 decay_mult: 0}
   exclude { stage: "freeze-convnet" }
   convolution_param {
     num_output: 64
@@ -225,8 +187,8 @@ layer {
   type: "Convolution"
   bottom: "pool1"
   top: "conv2_1"
-  param { lr_mult: 0.1 }
-  param { lr_mult: 0.2 decay_mult: 0}
+  param { lr_mult: 0 }
+  param { lr_mult: 0 decay_mult: 0}
   exclude { stage: "freeze-convnet" }
   convolution_param {
     num_output: 128
@@ -259,8 +221,8 @@ layer {
   type: "Convolution"
   bottom: "conv2_1"
   top: "conv2_2"
-  param { lr_mult: 0.1 }
-  param { lr_mult: 0.2 decay_mult: 0}
+  param { lr_mult: 0 }
+  param { lr_mult: 0 decay_mult: 0}
   exclude { stage: "freeze-convnet" }
   convolution_param {
     num_output: 128
@@ -304,8 +266,8 @@ layer {
   type: "Convolution"
   bottom: "pool2"
   top: "conv3_1"
-  param { lr_mult: 0.1 }
-  param { lr_mult: 0.2 decay_mult: 0}
+  param { lr_mult: 0 }
+  param { lr_mult: 0 decay_mult: 0}
   exclude { stage: "freeze-convnet" }
   convolution_param {
     num_output: 256
@@ -338,8 +300,8 @@ layer {
   type: "Convolution"
   bottom: "conv3_1"
   top: "conv3_2"
-  param { lr_mult: 0.1 }
-  param { lr_mult: 0.2 decay_mult: 0}
+  param { lr_mult: 0 }
+  param { lr_mult: 0 decay_mult: 0}
   exclude { stage: "freeze-convnet" }
   convolution_param {
     num_output: 256
@@ -372,8 +334,8 @@ layer {
   type: "Convolution"
   bottom: "conv3_2"
   top: "conv3_3"
-  param { lr_mult: 0.1 }
-  param { lr_mult: 0.2 decay_mult: 0}
+  param { lr_mult: 0 }
+  param { lr_mult: 0 decay_mult: 0}
   exclude { stage: "freeze-convnet" }
   convolution_param {
     num_output: 256
@@ -719,10 +681,26 @@ layer {
     num_output: 1000
   }
 }
+layer { 
+  name: "split_input"
+  type: "Slice"
+  bottom: "input_sentence"
+  top: "input_sentence_1"
+  top: "input_sentence_2"
+  slice_param {
+    slice_dim: 0
+    slice_point: 1
+  }
+}
+layer {
+  name: "silence"
+  type: "Silence"
+  bottom: "input_sentence_1"
+}
 layer {
   name: "embedding"
   type: "Embed"
-  bottom: "input_sentence"
+  bottom: "input_sentence_2"
   top: "embedded_input_sentence"
   param {
     lr_mult: 1
@@ -738,57 +716,36 @@ layer {
     }
   }
 }
-layer {
-  name: "lstm1"
-  type: "LSTM"
-  bottom: "embedded_input_sentence"
-  bottom: "cont_sentence"
+
+layer{
+  name: "fc8_reshape"
+  type: "Reshape"
   bottom: "fc8"
-  top: "lstm1"
-  include { stage: "unfactored" }
-  recurrent_param {
-    num_output: 1000
-    weight_filler {
-      type: "uniform"
-      min: -0.08
-      max: 0.08
-    }
-    bias_filler {
-      type: "constant"
-      value: 0
+  top: "fc8_reshape"
+  reshape_param {
+    shape {
+      dim: 1
+      dim: -1
+      dim: 1000
     }
   }
 }
-layer {
-  name: "lstm2"
-  type: "LSTM"
-  bottom: "lstm1"
-  bottom: "cont_sentence"
-  top: "lstm2"
-  include {
-    stage: "unfactored"
-    stage: "2-layer"
-  }
-  recurrent_param {
-    num_output: 1000
-    weight_filler {
-      type: "uniform"
-      min: -0.08
-      max: 0.08
-    }
-    bias_filler {
-      type: "constant"
-      value: 0
-    }
+layer{
+  name: "im_concat_words"
+  type: "Concat"
+  bottom:"fc8_reshape"
+  bottom:"embedded_input_sentence"
+  top: "im_concat_words"
+  concat_param {
+    axis: 0
   }
 }
 layer {
   name: "lstm1"
   type: "LSTM"
-  bottom: "embedded_input_sentence"
+  bottom: "im_concat_words"
   bottom: "cont_sentence"
   top: "lstm1"
-  include { stage: "factored" }
   recurrent_param {
     num_output: 1000
     weight_filler {
@@ -802,27 +759,7 @@ layer {
     }
   }
 }
-layer {
-  name: "lstm2"
-  type: "LSTM"
-  bottom: "lstm1"
-  bottom: "cont_sentence"
-  bottom: "fc8"
-  top: "lstm2"
-  include { stage: "factored" }
-  recurrent_param {
-    num_output: 1000
-    weight_filler {
-      type: "uniform"
-      min: -0.08
-      max: 0.08
-    }
-    bias_filler {
-      type: "constant"
-      value: 0
-    }
-  }
-}
+
 layer {
   name: "predict"
   type: "InnerProduct"
@@ -836,7 +773,6 @@ layer {
     lr_mult: 2
     decay_mult: 0
   }
-  exclude { stage: "2-layer" }
   inner_product_param {
     num_output: 15001
     weight_filler {
@@ -851,34 +787,7 @@ layer {
     axis: 2
   }
 }
-layer {
-  name: "predict"
-  type: "InnerProduct"
-  bottom: "lstm2"
-  top: "predict"
-  param {
-    lr_mult: 1
-    decay_mult: 1
-  }
-  param {
-    lr_mult: 2
-    decay_mult: 0
-  }
-  include { stage: "2-layer" }
-  inner_product_param {
-    num_output: 15001
-    weight_filler {
-      type: "uniform"
-      min: -0.08
-      max: 0.08
-    }
-    bias_filler {
-      type: "constant"
-      value: 0
-    }
-    axis: 2
-  }
-}
+
 layer {
   name: "cross_entropy_loss"
   type: "SoftmaxWithLoss"

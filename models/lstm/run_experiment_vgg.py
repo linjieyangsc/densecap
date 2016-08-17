@@ -7,7 +7,7 @@ import pprint
 import cPickle as pickle
 import string
 import sys
-
+import time
 # seed the RNG so we evaluate on the same subset each time
 np.random.seed(seed=0)
 sys.path.append('./examples/coco_caption/')  
@@ -37,9 +37,9 @@ class CaptionExperiment():
 
   def init_caption_list(self, dataset):
     self.captions = []
-    for image, caption in dataset.iteritems():
-     
-      self.captions.append({'source_image': image, 'caption': caption})
+    for image, captions in dataset.iteritems():
+      for caption, _ in captions:
+        self.captions.append({'source_image': image, 'caption': caption})
     # Sort by length for performance.
     self.captions.sort(key=lambda c: len(c['caption']))
 
@@ -152,9 +152,8 @@ class CaptionExperiment():
          ('num' not in strategy or strategy['num'] == 1))
 
     num_images = len(self.images)
-    print 'number of images %d' % num_images
     batch_size = min(max_batch_size, num_images) if do_batches else 1
-
+    t1 =time.time()
     # Generate captions for all images.
     all_captions = [None] * num_images
     for image_index in xrange(0, num_images, batch_size):
@@ -185,7 +184,8 @@ class CaptionExperiment():
               best_caption, max_log_prob = caption, log_prob
           all_captions[batch_image_index] = best_caption
     sys.stdout.write('\n')
-
+    t2 = time.time()
+    print "%f seconds elapsed" % (t2-t1)
     # Compute the number of reference files as the maximum number of ground
     # truth captions of any image in the dataset.
     num_reference_files = 1 # only 1 captions for dreamstime
@@ -206,23 +206,25 @@ class CaptionExperiment():
     for image_index, image in enumerate(self.images):
       caption = self.captioner.sentence(all_captions[image_index])
       model_captions[image_index] = caption
-      caption = self.dataset[image]
+      caption = self.dataset[image][0][1]
       caption = ' '.join(caption)
       reference_captions[image_index] = caption
 
     image_ids = range(len(self.images))#dummy index
     generation_result = [{
       'image_id': image_ids[image_index],
-      'caption': model_captions[image_index]
+      'image_path': image_path,
+      'caption': model_captions[image_index],
+      'gt_caption': reference_captions[image_index]
     } for (image_index, image_path) in enumerate(self.images)]
     json_filename = '%s/generation_result.json' % self.cache_dir
     print 'Dumping result to file: %s' % json_filename
     with open(json_filename, 'w') as json_file:
       json.dump(generation_result, json_file)
     #generation_result = self.sg.coco.loadRes(json_filename)
-    dt_evaluator = DtEvalCap(reference_captions, model_captions)
-    dt_evaluator.params['image_id'] = image_ids
-    dt_evaluator.evaluate()
+    #dt_evaluator = DtEvalCap(reference_captions, model_captions)
+    #dt_evaluator.params['image_id'] = image_ids
+    #dt_evaluator.evaluate()
 
 def gen_stats(prob):
   stats = {}
@@ -254,9 +256,10 @@ def main():
     MODEL_FILENAME = 'lrcn_finetune_trainval_stepsize40k_iter_%d' % ITER
     DATASET_NAME = 'test'
   else:  # eval on val
-    ITER = 200000
-    MODEL_FILENAME = 'lrcn_vgg_iter_%d' % ITER
-    DATASET_NAME = 'dt'
+    ITER = 80000
+    MODEL_FILENAME = 'lrcn2_finetune_vgg_iter_%d' % ITER
+    DATA_SOURCE='val'
+    DATASET_NAME = 'dt_%s' % DATA_SOURCE
   TAG += '_%s' % DATASET_NAME
   MODEL_DIR = './models/lstm'
   MODEL_FILE = '%s/%s.caffemodel' % (MODEL_DIR, MODEL_FILENAME)
@@ -266,25 +269,28 @@ def main():
   DATASET_SUBDIR = '%s/%s_ims' % (DATASET_NAME,
       str(MAX_IMAGES) if MAX_IMAGES >= 0 else 'all')
   DATASET_CACHE_DIR = './retrieval_cache/%s/%s' % (DATASET_SUBDIR, MODEL_FILENAME)
-  VOCAB_FILE = './models/lstm/vocab.txt'
-  DEVICE_ID = 4
+  VOCAB_FILE = './models/lstm/h5_data_distill/buffer_100/vocabulary'
+  DEVICE_ID = 1
   with open(VOCAB_FILE, 'r') as vocab_file:
     vocab = [line.strip() for line in vocab_file.readlines()]
   #coco = COCO(COCO_ANNO_PATH % DATASET_NAME)
   #image_root = '/media/researchshare/linjie/data/dreamstime/images'#COCO_IMAGE_PATTERN % DATASET_NAME
-  eval_image_file = '/home/a-linjieyang/work/video_caption/dreamstime/val_list.txt'
-  eval_caption_file = '/home/a-linjieyang/work/video_caption/dreamstime/val_list_cap.txt'
+  eval_image_file = '/media/researchshare/linjie/work/video_caption/captioning/%s_list_sample.txt' % DATA_SOURCE
+  eval_caption_file = '/media/researchshare/linjie/work/video_caption/captioning/%s_list_cap_sample.txt' % DATA_SOURCE
   with open(eval_image_file, 'r') as split_file:
-    split_images = [line.strip()[:-2] for line in split_file]
+    split_images = [line.strip().split()[0] for line in split_file]
   with open(eval_caption_file, 'r') as split_cap_file:
     split_sentences = [line.strip() for line in split_cap_file]
-
+  im_n = len(split_images)
+  #split_sentences = [''] * im_n
   sg = DtSequenceGenerator(BUFFER_SIZE, split_images, split_sentences, vocab=vocab, align=False)
   dataset = {}
   for image_path, sentence in sg.image_sentence_pairs:
     if image_path not in dataset:
-      dataset[image_path] = sentence
-    #dataset[image_path].append((sg.line_to_stream(sentence), sentence))
+      #print sentence
+      dataset[image_path] = [(sg.line_to_stream(sentence),sentence)]
+      print dataset[image_path][0][1]
+      #dataset[image_path].append((sg.line_to_stream(sentence), sentence))
   print 'Original dataset contains %d images' % len(dataset.keys())
   if 0 <= MAX_IMAGES < len(dataset.keys()):
     all_keys = dataset.keys()
@@ -297,7 +303,8 @@ def main():
   if MAX_IMAGES < 0: MAX_IMAGES = len(dataset.keys())
   captioner = Captioner(MODEL_FILE, IMAGE_NET_FILE, LSTM_NET_FILE, VOCAB_FILE,
                         device_id=DEVICE_ID)
-  beam_size = 1
+  beam_size = 5
+
   generation_strategy = {'type': 'beam', 'beam_size': beam_size}
   if generation_strategy['type'] == 'beam':
     strategy_name = 'beam%d' % generation_strategy['beam_size']
@@ -308,6 +315,7 @@ def main():
   CACHE_DIR = '%s/%s' % (DATASET_CACHE_DIR, strategy_name)
   experimenter = CaptionExperiment(captioner, dataset, DATASET_CACHE_DIR, CACHE_DIR, sg)
   captioner.set_image_batch_size(min(100, MAX_IMAGES))
+  
   experimenter.generation_experiment(generation_strategy)
   captioner.set_caption_batch_size(min(MAX_IMAGES * 5, 1000))
   #experimenter.retrieval_experiment()

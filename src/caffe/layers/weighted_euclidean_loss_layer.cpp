@@ -53,10 +53,7 @@ void WeightedEuclideanLossLayer<Dtype>::Backward_cpu(const vector<Blob<Dtype>*>&
     }
   }
 }
-
-#ifdef CPU_ONLY
-STUB_GPU(WeightedEuclideanLossLayer);
-#endif
+//no GPU implementation yet
 
 INSTANTIATE_CLASS(WeightedEuclideanLossLayer);
 REGISTER_LAYER_CLASS(WeightedEuclideanLoss);
