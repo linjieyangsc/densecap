@@ -62,7 +62,16 @@ class VgEvalCap:
         score, scores = Meteor().compute_score_m2m(gts_tokens, res_tokens)
         #self.setEval(score, method)
         #self.setImgToEvalImgs(scores, imgIds, method)
-        print "Meteor: %0.3f"%(score)
+        print "Meteor (original): %0.3f"%(score)
+        scores_mean_im = np.zeros(len(imgIds))
+        tot_score = 0.0
+        tot_regions = 0
+        for i, scores_im in enumerate(scores):
+          scores_mean_im[i] = np.array(scores_im).mean()
+          tot_regions += len(scores_im)
+          tot_score += scores_mean_im[i] * len(scores_im)
+        print "Meteor (calculated by mean over scores on all regions): %0.3f"%(tot_score / tot_regions)
+        print "Meteor (calculated by mean of scores of per image): %0.3f"%(scores_mean_im.mean())
         #self.setEvalImgs()
         # mean ap settings, as in DenseCap paper
         overlap_ratios = [0.3,0.4,0.5,0.6,0.7]

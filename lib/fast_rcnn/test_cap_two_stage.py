@@ -116,7 +116,8 @@ def _get_blobs(im, rois):
     if not cfg.TEST.HAS_RPN:
         blobs['rois'] = _get_rois_blob(rois, im_scale_factors)
     return blobs, im_scale_factors
-def _greedy_search(embed_net, recurrent_net, forward_args, optional_args, proposal_n, max_timestep = 15, pred_bbox = True):
+def _greedy_search(embed_net, recurrent_net, forward_args, optional_args, proposal_n, max_timestep = 15, \
+        pred_bbox = True, use_box_at = -1):
     """Do greedy search to find the regions and captions"""
     # Data preparation
 
@@ -124,7 +125,7 @@ def _greedy_search(embed_net, recurrent_net, forward_args, optional_args, propos
     pred_captions = [None] * proposal_n
     pred_logprobs = [0.0] * proposal_n
     pred_bbox_offsets = np.zeros((proposal_n, 4))
-
+    #pred_bbox_offsets_all = [None] *proposal_n
 
     
     forward_args['cont_sentence'] = np.zeros((1,proposal_n))
@@ -183,40 +184,39 @@ def _greedy_search(embed_net, recurrent_net, forward_args, optional_args, propos
             if not pred_captions[i]:
                 pred_captions[i] = [w]
                 pred_logprobs[i] = math.log(word_probs[0,i,w])
+                if pred_bbox and use_box_at == 0:
+                    pred_bbox_offsets[i,:] = bbox_pred[0,i,:].copy() 
             elif pred_captions[i][-1] != 0:
                 pred_captions[i].append(w)
                 pred_logprobs[i] += math.log(word_probs[0,i,w])
-                pred_bbox_offsets[i,:] = bbox_pred[0,i,:] if pred_bbox else 0
+                if pred_bbox and (use_box_at < 0 or use_box_at >= step):
+                    pred_bbox_offsets[i,:] = bbox_pred[0,i,:].copy()
+                    
             else:
                 finish_n += 1
+
         input_sentence[:] = best_words
         forward_args['cont_sentence'][:] = 1
         if finish_n == proposal_n:
             break
-
     return pred_captions, pred_bbox_offsets, pred_logprobs
 
-def im_detect(feature_net, embed_net, recurrent_net, im, boxes=None):
+def im_detect(feature_net, embed_net, recurrent_net, im, boxes=None, use_box_at = -1):
     """Detect object classes in an image given object proposals.
 
     Arguments:
         feature_net (caffe.Net): CNN model for extracting features
+        embed_net (caffe.Net): A word embedding layer
         recurrent_net (caffe.Net): Recurrent model for generating captions and locations
         im (ndarray): color image to test (in BGR order)
         boxes (ndarray): R x 4 array of object proposals or None (for RPN)
-
+        use_box_at (int32): Use predicted box at a given timestep, default to the last one (use_box_at=-1)
     Returns:
         scores (ndarray): R x 1 array of object class scores 
-        boxes_seq (list): length R list of caption_n x 4 array of predicted bounding boxes
-        captions (list): length R list of length caption_n list of word tokens (captions)
+        pred_boxes (ndarray)): R x 4 array of predicted bounding boxes
+        captions (list): length R list of list of word tokens (captions)
     """
-    # Previously:
-    # 1. forward pass of one image
-    # 2. get rois, bbox score and bbox prediction
-    # Now:
-    # 1. forward pass of one image --> image features and a list of proposals (rois)
-    # 2. for each proposal, do greedy search, which is the same way as DenseCap
-    # 
+
     # for bbox unnormalization
     # TODO: put it in a more organized way
     bbox_mean = np.array([0,0,0,0]).reshape((1,4))
@@ -256,13 +256,15 @@ def im_detect(feature_net, embed_net, recurrent_net, im, boxes=None):
 
     if bbox_pred_direct:
         # do greedy search
-        captions, _, logprobs = _greedy_search(embed_net, recurrent_net, feat_args, opt_args, proposal_n, pred_bbox = not bbox_pred_direct)
+        captions, _, logprobs = _greedy_search(embed_net, recurrent_net, feat_args, opt_args, proposal_n, pred_bbox = False)
         #bbox target unnormalization
         box_offsets = feature_net.blobs['bbox_pred'].data
     else:
 
-        captions, box_offsets, logprobs = _greedy_search(embed_net, recurrent_net, feat_args, opt_args, proposal_n, pred_bbox = not bbox_pred_direct)
-   
+        captions, box_offsets, logprobs = _greedy_search(embed_net, recurrent_net, feat_args, opt_args, proposal_n, \
+            pred_bbox = True, use_box_at = use_box_at)
+
+    #pred_box_all = []#[None] * proposal_n
     #bbox target unnormalization
     box_deltas = box_offsets * bbox_stds + bbox_mean
 
@@ -270,6 +272,14 @@ def im_detect(feature_net, embed_net, recurrent_net, im, boxes=None):
     pred_boxes = bbox_transform_inv(boxes, box_deltas)
     pred_boxes = clip_boxes(pred_boxes, im.shape)
     
+    # for box_list, box in zip(box_offsets_all, boxes):
+    #     #bbox target unnormalization
+    #     box_deltas = box_list * bbox_stds + bbox_mean
+
+    #     #do the transformation
+    #     pred_box_list = bbox_transform_inv(np.tile(box, (proposal_n,1)), box_deltas)
+    #     pred_box_list = clip_boxes(pred_boxes, im.shape)
+    #     pred_box_all.append(pred_box_list)
     return scores, pred_boxes, captions
 
 def vis_detections(im_path, im, captions, dets, thresh=0.6, save_path='vis'):
@@ -306,7 +316,7 @@ def sentence(vocab, vocab_indices):
       sentence = sentence[:-len(suffix)]
     return sentence
 
-def test_net(feature_net, embed_net, recurrent_net, imdb, max_per_image=100, vis=True):
+def test_net(feature_net, embed_net, recurrent_net, imdb, vis=True, use_box_at = -1):
     """Test a Fast R-CNN network on an image database."""
     num_images = len(imdb.image_index)
     if DEBUG:
@@ -341,9 +351,8 @@ def test_net(feature_net, embed_net, recurrent_net, imdb, max_per_image=100, vis
 
         im = cv2.imread(imdb.image_path_at(i))
         _t['im_detect'].tic()
-        scores, boxes, captions = im_detect(feature_net, embed_net, recurrent_net, im, box_proposals)
-        #features = extract_feature(net, im)
-
+        scores, boxes, captions = im_detect(feature_net, embed_net, recurrent_net, im, box_proposals, use_box_at=use_box_at)
+        
         _t['im_detect'].toc()
 
         _t['misc'].tic()
@@ -412,4 +421,4 @@ def test_net(feature_net, embed_net, recurrent_net, imdb, max_per_image=100, vis
     vg_evaluator = VgEvalCap(gt_regions_merged, all_regions)
     vg_evaluator.params['image_id'] = image_ids
     vg_evaluator.evaluate()
-    
+

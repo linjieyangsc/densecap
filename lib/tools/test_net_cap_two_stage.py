@@ -44,18 +44,13 @@ def parse_args():
                         default=True, type=bool)
     parser.add_argument('--imdb', dest='imdb_name',
                         help='dataset to test',
-                        default='voc_2007_test', type=str)
-    parser.add_argument('--comp', dest='comp_mode', help='competition mode',
-                        action='store_true')
-    parser.add_argument('--set', dest='set_cfgs',
-                        help='set config keys', default=None,
-                        nargs=argparse.REMAINDER)
+                        default='vg_1.0_test', type=str)
+   
     parser.add_argument('--vis', dest='vis', help='visualize detections',
                         action='store_true')
-    parser.add_argument('--num_dets', dest='max_per_image',
-                        help='max number of detections per image',
-                        default=100, type=int)
-
+    parser.add_argument('--use_box_at', dest='use_box_at',
+                        help='use predicted box at this time step, fault to the last',
+                        default=-1, type=int)
     if len(sys.argv) == 1:
         parser.print_help()
         sys.exit(1)
@@ -71,8 +66,6 @@ if __name__ == '__main__':
 
     if args.cfg_file is not None:
         cfg_from_file(args.cfg_file)
-    if args.set_cfgs is not None:
-        cfg_from_list(args.set_cfgs)
 
     cfg.GPU_ID = args.gpu_id
 
@@ -90,8 +83,6 @@ if __name__ == '__main__':
     recurrent_net = caffe.Net(args.recurrent_prototxt, args.caffemodel, caffe.TEST)
     feature_net.name = os.path.splitext(os.path.basename(args.caffemodel))[0]
     imdb = get_imdb(args.imdb_name)
-    imdb.competition_mode(args.comp_mode)
-    if not cfg.TEST.HAS_RPN:
-        imdb.set_proposal_method(cfg.TEST.PROPOSAL_METHOD)
     #print args.max_per_image
-    test_net(feature_net, embed_net, recurrent_net, imdb, max_per_image=args.max_per_image, vis=args.vis)
+    test_net(feature_net, embed_net, recurrent_net, imdb, \
+        vis=args.vis, use_box_at=args.use_box_at)

@@ -1,11 +1,4 @@
-# --------------------------------------------------------
-# Fast R-CNN
-# Copyright (c) 2015 Microsoft
-# Licensed under The MIT License [see LICENSE for details]
-# Written by Ross Girshick
-# --------------------------------------------------------
-
-"""Test a Fast R-CNN network on an imdb (image database)."""
+"""Test a network on an imdb, results loaded from file."""
 import _init_paths
 import argparse
 import numpy as np
