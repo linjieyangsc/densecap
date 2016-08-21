@@ -1,0 +1,16 @@
+name: "word_embedding"
+input: "input_sentence"
+input_shape {dim: 1 dim: 1}
+
+layer {
+  name: "embedding"
+  type: "Embed"
+  bottom: "input_sentence"
+  top: "word_embedding"
+    embed_param {
+    input_dim: 15001
+    num_output: 1000
+    bias_term: false
+  }
+}
+
