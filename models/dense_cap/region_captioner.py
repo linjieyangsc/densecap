@@ -3,8 +3,9 @@
 from collections import OrderedDict
 import h5py
 import math
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 #import cv2
+import PIL
 import numpy as np
 import os
 import random
@@ -66,7 +67,8 @@ class RegionCaptioner():
 
   def preprocess_image(self, image, verbose=False):
     if type(image) in (str, unicode):
-      image = plt.imread(image)
+      #image = plt.imread(image)
+      image = np.array(PIL.open(image))
     crop_edge_ratio = 0#no need to crop
     #ch = int(image.shape[0] * crop_edge_ratio + 0.5)
     #cw = int(image.shape[1] * crop_edge_ratio + 0.5)
