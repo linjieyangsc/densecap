@@ -250,7 +250,7 @@ def im_detect(feature_net, embed_net, recurrent_net, im, boxes=None, use_box_at 
     
     # constant image features as an optional input
     if 'image_features' in recurrent_net.blobs:
-        forward_args['image_features'] = region_features.copy()
+        feat_args['image_features'] = region_features.copy()
     
     bbox_pred_direct = ('bbox_pred' in feature_net.blobs)
 

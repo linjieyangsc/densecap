@@ -548,6 +548,7 @@ layer {
   top: 'rpn_bbox_targets'
   top: 'rpn_bbox_inside_weights'
   top: 'rpn_bbox_outside_weights'
+  exclude {stage: 'freeze-rpn'}
   python_param {
     module: 'rpn.anchor_target_layer'
     layer: 'AnchorTargetLayer'
@@ -565,6 +566,7 @@ layer {
   propagate_down: 0
   top: "rpn_cls_loss"
   loss_weight: 0.1
+  exclude {stage: 'freeze-rpn'}
   loss_param {
     ignore_label: -1
     normalize: true
@@ -578,6 +580,7 @@ layer {
   bottom: 'rpn_bbox_inside_weights'
   bottom: 'rpn_bbox_outside_weights'
   top: "rpn_loss_bbox"
+  exclude {stage: 'freeze-rpn'}
   loss_weight: 0.05
   smooth_l1_loss_param { sigma: 3.0 }
 }
@@ -793,7 +796,7 @@ layer {
   python_param {
     module: 'rpn.sentence_data_layer'
     layer: 'SentenceDataLayer'
-    param_str: "{'time_steps': 12, 'phrase_path': 'models/dense_cap/h5_data_distill/buffer_100/train_gt_phrases.pkl','mode':'concat'}" 
+    param_str: "{'time_steps': 12, 'phrase_path': 'data/visual_genome/1.2/train_gt_phrases.pkl','mode':'concat'}" 
   }
 }
 layer {

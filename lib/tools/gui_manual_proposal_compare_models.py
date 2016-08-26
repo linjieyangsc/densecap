@@ -120,7 +120,7 @@ def main():
         im_list = [line.strip() for line in f]
     vocab_path = 'data/visual_genome/1.0/vocabulary.txt'
     caffe.set_mode_gpu()
-    caffe.set_device(0)
+    caffe.set_device(1)
     models=[]
     model_names = ('two_stage4_512_finetune','two_stage_context8_finetune3')
     recurrent_proto_names = ('test_cap_pred4_512','test_cap_pred_context8')

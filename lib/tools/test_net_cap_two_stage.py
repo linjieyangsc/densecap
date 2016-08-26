@@ -49,7 +49,7 @@ def parse_args():
     parser.add_argument('--vis', dest='vis', help='visualize detections',
                         action='store_true')
     parser.add_argument('--use_box_at', dest='use_box_at',
-                        help='use predicted box at this time step, fault to the last',
+                        help='use predicted box at this time step, default to the last',
                         default=-1, type=int)
     if len(sys.argv) == 1:
         parser.print_help()

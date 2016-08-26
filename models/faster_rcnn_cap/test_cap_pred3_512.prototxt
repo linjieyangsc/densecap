@@ -1,10 +1,4 @@
 name: "VGG_ILSVRC_16_layers"
-input: "image_features"
-input_shape {
-  dim: 1
-  dim: 1
-  dim: 512
-}
 
 input: "input_features"
 input_shape {

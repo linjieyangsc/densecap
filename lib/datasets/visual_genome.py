@@ -17,7 +17,7 @@ UNK_IDENTIFIER='<unk>'
 DEFAULT_PATH='data/visual_genome'
 class visual_genome(imdb):
     def __init__(self, image_set, version):
-        imdb.__init__(self, 'vg_' + image_set)
+        imdb.__init__(self, 'vg_' + version+ '_' + image_set)
         self._image_set = image_set
         
         self._data_path  = '%s/%s' % (DEFAULT_PATH, version) 
