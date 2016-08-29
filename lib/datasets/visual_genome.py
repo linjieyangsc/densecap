@@ -21,7 +21,7 @@ class visual_genome(imdb):
         self._image_set = image_set
         
         self._data_path  = '%s/%s' % (DEFAULT_PATH, version) 
-        
+        cfg.CACHE_DIR = self._data_path 
         self._image_ext = '.jpg'
         print 'data_path: %s' % self._data_path
         region_imset_path = os.path.join(self._data_path, '%s_gt_regions.json' % image_set)

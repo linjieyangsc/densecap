@@ -20,11 +20,8 @@ import json
 from utils.blob import im_list_to_blob
 import os
 import sys
-sys.path.append('models/dense_cap/')
-from run_experiment_vgg_vg import gt_region_merge, get_bbox_coord
-from vg_to_hdf5_data import *
-#sys.path.add('examples/coco-caption')
-#import
+#sys.path.append('lib/')
+from utils.bbox_utils import region_merge, get_bbox_coord
 COCO_EVAL_PATH = 'coco-caption/'
 sys.path.append(COCO_EVAL_PATH)
 from pycocoevalcap.vg_eval import VgEvalCap
@@ -416,7 +413,7 @@ def test_net(feature_net, embed_net, recurrent_net, imdb, vis=True, use_box_at =
             new_gt_regions.append(anno)
         #merge regions with large overlapped areas
         assert(len(new_gt_regions) > 0)
-        gt_regions_merged[i] = gt_region_merge(new_gt_regions)
+        gt_regions_merged[i] = region_merge(new_gt_regions)
     image_ids = range(num_images)
     vg_evaluator = VgEvalCap(gt_regions_merged, all_regions)
     vg_evaluator.params['image_id'] = image_ids
