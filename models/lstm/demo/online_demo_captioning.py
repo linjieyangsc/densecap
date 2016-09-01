@@ -27,10 +27,12 @@ class CaptioningService():
     #record the processing time
     t1 = time.time()
     descriptor = self.captioner.compute_descriptor(image)
+    t2 = time.time() 
     caption, log_prob = self.captioner.predict_caption(descriptor)
     res = self.format_json(caption, log_prob)
-    t2 = time.time()
-    print 'processing time: %.03f seconds' % (t2-t1)
+    t3 = time.time()
+    print 'image feature processing time: %.03f seconds' % (t2-t1)
+    print 'caption generation time: %.03f seconds' % (t3-t2)
     return res
   def format_json(self, caption, log_prob):
     res = {}

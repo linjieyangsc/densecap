@@ -17,7 +17,7 @@ display: 20
 max_iter: 200000
 momentum: 0.9
 weight_decay: 0.0000
-snapshot: 100000
+snapshot: 50000
 snapshot_prefix: "./models/lstm/results/lrcn_googlenet"
 solver_mode: GPU
 random_seed: 1701
