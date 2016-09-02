@@ -8,7 +8,7 @@ import numpy as np
 import yaml
 import pprint
 import cPickle
-import fast_rcnn.config as cfg
+from fast_rcnn.config import cfg
 from collections import Counter
 DEBUG=False
 class SentenceDataLayer(caffe.Layer):
@@ -22,7 +22,7 @@ class SentenceDataLayer(caffe.Layer):
         layer_params = yaml.load(self.param_str_)
         all_modes = ('repeat','concat','concat2')
         self._time_steps = layer_params['time_steps']
-        phrase_path = '%s/%s_gt_phrases.pkl' % (cfg.CACHE_DIR, str(self.phase))
+        phrase_path = '%s/%s_gt_phrases.pkl' % (cfg.CACHE_DIR, str(self.phase).lower())
         self._mode = layer_params['mode'] if 'mode' in layer_params else 'repeat'
         assert (self._mode in all_modes)
         self._all_phrases = cPickle.load(open(phrase_path,'rb'))
