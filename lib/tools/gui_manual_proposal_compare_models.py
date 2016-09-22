@@ -6,18 +6,20 @@ import numpy as np
 from fast_rcnn.test_cap_manual_proposal import region_captioning, sentence
 from fast_rcnn.config import cfg
 import cv2
-
+show_input=False
 class Interface(object):
     def __init__(self, image_path, image_list, vocabulary_path, models):
         self.ax = plt.axes([0,0,1,1])
-        self.colors = ['g','r','c','m','y','k']
+        self.colors = ['r','c','m','y','k']
         # init rectangles to be drawn
-        self.rect = Rectangle((0,0), 0, 0, fill=False, edgecolor='b',linewidth=2)
+        lw = 4
+        self.rect = Rectangle((0,0), 0, 0, fill=False, edgecolor='b',linewidth=lw)
         self.rect_predicted = []
         self.model_n = len(models)
         self.models = models
+        st = ('solid', 'dashed')
         for i in xrange(self.model_n):
-            self.rect_predicted.append(Rectangle((0,0), 0, 0, fill=False, edgecolor=self.colors[i],linewidth=2))
+            self.rect_predicted.append(Rectangle((0,0), 0, 0, fill=False, edgecolor=self.colors[i], linestyle=st[i], linewidth=lw))
             self.ax.add_patch(self.rect_predicted[-1])
         # read vocabulary
         with open(vocabulary_path,'r') as f:
@@ -58,11 +60,19 @@ class Interface(object):
             self.image_id = (self.image_id - 1) % len(self.image_list)
           elif event.key == 'e':
             self.image_id = (self.image_id + 1) % len(self.image_list)
-
-          if event.key in set(['d','e']):
-            
-            # update image to show
-            cur_image_path = self.image_path % self.image_list[self.image_id]
+          elif event.key == 'g':
+            self.image_id = (self.image_id - 10) % len(self.image_list)
+          elif event.key == 't':
+            self.image_id = (self.image_id + 10) % len(self.image_list)
+          elif event.key == 'q':
+            self.image_name = raw_input()
+          if event.key in set(['d','e','g','t', 'q']):
+            if event.key == 'q':
+                cur_image_path = self.image_path % self.image_name
+            else:
+                # update image to show
+                print 'loading image #%d, name: %s' % (self.image_id, self.image_list[self.image_id])
+                cur_image_path = self.image_path % self.image_list[self.image_id]
             
             self.im = cv2.imread(cur_image_path)
             self.disp_im = cv2.cvtColor(self.im, cv2.COLOR_BGR2RGB)
@@ -91,9 +101,10 @@ class Interface(object):
         print 'release'
         self.x1 = event.xdata
         self.y1 = event.ydata
-        self.rect.set_width(self.x1 - self.x0)
-        self.rect.set_height(self.y1 - self.y0)
-        self.rect.set_xy((self.x0, self.y0))
+        if show_input:
+            self.rect.set_width(self.x1 - self.x0)
+            self.rect.set_height(self.y1 - self.y0)
+            self.rect.set_xy((self.x0, self.y0))
         print 'rectangle coordinates: (%.01f, %.01f, %.01f, %.01f)' % (self.x0, self.y0, self.x1, self.y1)
         box = np.array([self.x0, self.y0, self.x1, self.y1]).reshape(1,4)
         #predict regressed box and caption
@@ -110,7 +121,7 @@ class Interface(object):
             self.rect_predicted[i].set_label(caption_str)
      
             
-        self.ax.legend(loc='best')
+        self.ax.legend(loc='best', prop={'size': 22})
         self.ax.figure.canvas.draw()
 
 def main():
@@ -123,11 +134,14 @@ def main():
     caffe.set_device(1)
     models=[]
     model_names = ('two_stage4_512_finetune','two_stage_context8_finetune3')
+    #model_names = ('two_stage_512_finetune','two_stage4_512_finetune')
     recurrent_proto_names = ('test_cap_pred4_512','test_cap_pred_context8')
     feature_proto_names = ('vgg_region_feature_given_box','vgg_region_global_feature_given_box')
+    #recurrent_proto_names = ('test_cap_pred_512','test_cap_pred4_512')
+    #feature_proto_names = ('vgg_region_feature_bbox_given_box', 'vgg_region_feature_given_box')
     for model_name, feature_proto_name, recurrent_proto_name in zip(model_names, feature_proto_names, recurrent_proto_names):
         model = {}
-        caffemodel = 'output/faster_rcnn_end2end/vg_train/faster_rcnn_cap_%s_iter_200000.caffemodel' \
+        caffemodel = 'output/faster_rcnn_end2end/vg_1.0_train/faster_rcnn_cap_%s_iter_200000.caffemodel' \
             % model_name
         feature_prototxt = 'models/faster_rcnn_cap/%s.prototxt' % feature_proto_name
         embed_prototxt = 'models/faster_rcnn_cap/test_word_embedding_512.prototxt'

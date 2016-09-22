@@ -9,6 +9,7 @@ from meteor.meteor import Meteor
 #from rouge.rouge import Rouge
 #from cider.cider import Cider
 #import nltk
+import pdb
 class VgEvalCap:
     def __init__(self, ref_caps, model_caps):
         self.evalImgs = []
@@ -90,6 +91,8 @@ class VgEvalCap:
           gt_caption_locations = gts[imgId]
           #should be sorted using predicted prob in advance
           #model_caption_locations.sort(key=lambda x:-x['log_prob'])
+          if len(model_caption_locations) == 0:
+            continue
           ov_matrix = self.calculate_overlap_matrix(model_caption_locations, gt_caption_locations)
           match_gt_ids, match_ratios = self.bbox_match(ov_matrix)
           probs = np.array([x['prob'] for x in model_caption_locations])
@@ -140,9 +143,13 @@ class VgEvalCap:
               p = np.max(prec * mask)
               ap += p
             ap_matrix[rid, th_id] = ap / apn
+        
+
         t3 = time.time()
         print 'mean ap computing finished, takes %f seconds' % (t3 - t2)
         mean_ap = np.mean(ap_matrix) * 100 # percent
+        print 'mean match ratio is %0.3f' % all_match_ratios.mean()
+
         print 'ap matrix'
         print ap_matrix
         print "mean average precision is %0.3f" % mean_ap

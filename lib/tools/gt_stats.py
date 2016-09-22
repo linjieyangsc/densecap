@@ -56,15 +56,19 @@ def get_stats(imdb):
     #base = base[::-1]
     #cum_counts = np.cumsum(counts[::-1])
     #plt.plot(base[:-1], counts, c='blue')
-    
-    plt.hist(max_iou_filt, 7, normed=0, facecolor='#7f7f7f')
+    fig = plt.figure()
+    #ax =fig.add_axes([0.2, 0.1, 0.7, 0.7])
+    ax = fig.add_axes()
+    ax.tight_layout()
+    ax.hist(max_iou_filt, 7, normed=0, facecolor='#7f7f7f')
     #plt.title('Max IoU between ground truth bounding boxes')
     #plt.bar(base, counts, 0.7, color='b')
-    plt.grid(True)
-    plt.xlabel('max IoU')
-    plt.ylabel('bbox number')
-    plt.xlim([0,0.7])
-    plt.show()
+    ax.grid(True)
+    ax.set_xlabel('max IoU',fontsize=20)
+    ax.set_ylabel('bbox number',fontsize=20)
+    ax.set_xlim([0,0.7])
+    ax.tick_params(axis='both',which='major',labelsize=16)
+    fig.show()
     save_name = 'bbox_overlap_stats.png'
     plt.savefig(save_name)
 

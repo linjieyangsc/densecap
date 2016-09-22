@@ -21,7 +21,6 @@ from utils.blob import im_list_to_blob
 import os
 import sys
 sys.path.append('models/dense_cap/')
-from run_experiment_vgg_vg import gt_region_merge, get_bbox_coord
 from vg_to_hdf5_data import *
 #sys.path.add('examples/coco-caption')
 #import
