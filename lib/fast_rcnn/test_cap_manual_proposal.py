@@ -128,9 +128,11 @@ def _greedy_search(embed_net, recurrent_net, forward_args, optional_args, max_ti
 
     
     forward_args['cont_sentence'] = np.zeros((1,1))
-    if 'global_features' in optional_args:
+    if 'global_features' in optional_args and 'fusion_features' in recurrent_net.blobs:
+        # need to manually set the fusion operation here
+        forward_args['fusion_features'] = forward_args['input_features'] * optional_args['global_features'].reshape(*(forward_args['input_features'].shape))
+    elif 'global_features' in optional_args:
         forward_args['global_features'] = optional_args['global_features'].reshape(*(forward_args['input_features'].shape))
-
     # reshape blobs
     for k, v in forward_args.iteritems():
         if DEBUG:
@@ -151,6 +153,8 @@ def _greedy_search(embed_net, recurrent_net, forward_args, optional_args, max_ti
         # another lstm for global features
         if 'global_features' in recurrent_net.blobs:
             forward_args['global_features'] =  embed_out['embedded_sentence']
+        if 'fusion_features' in recurrent_net.blobs:
+            forward_args['fusion_features'] = embed_out['embedded_sentence']
         blobs_out = recurrent_net.forward(**forward_args)
 
         word_probs = blobs_out['probs'].copy()

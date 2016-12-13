@@ -56,22 +56,23 @@ def get_stats(imdb):
     #base = base[::-1]
     #cum_counts = np.cumsum(counts[::-1])
     #plt.plot(base[:-1], counts, c='blue')
-    fig = plt.figure()
+    #fig = plt.figure()
     #ax =fig.add_axes([0.2, 0.1, 0.7, 0.7])
-    ax = fig.add_axes()
-    ax.tight_layout()
-    ax.hist(max_iou_filt, 7, normed=0, facecolor='#7f7f7f')
+    #ax = fig.add_axes()
+    plt.hist(max_iou_filt, 7, normed=0, facecolor='#7f7f7f')
     #plt.title('Max IoU between ground truth bounding boxes')
     #plt.bar(base, counts, 0.7, color='b')
-    ax.grid(True)
-    ax.set_xlabel('max IoU',fontsize=20)
-    ax.set_ylabel('bbox number',fontsize=20)
-    ax.set_xlim([0,0.7])
-    ax.tick_params(axis='both',which='major',labelsize=16)
-    fig.show()
+    plt.grid(True)
+    plt.xlabel('max IoU',fontsize=20)
+    plt.ylabel('bbox number',fontsize=20)
+    plt.xlim([0,0.7])
+    plt.tick_params(axis='both',which='major',labelsize=16)
+    plt.tight_layout()
+    
+    plt.show()
     save_name = 'bbox_overlap_stats.png'
     plt.savefig(save_name)
-
+    
     #gt phrase len stats
     fig = plt.figure()
     ax = fig.add_subplot(111)

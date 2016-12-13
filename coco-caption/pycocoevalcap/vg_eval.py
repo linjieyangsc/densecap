@@ -153,7 +153,7 @@ class VgEvalCap:
         print 'ap matrix'
         print ap_matrix
         print "mean average precision is %0.3f" % mean_ap
-        
+        return mean_ap 
     def calculate_overlap_matrix(self, model_caption_locations, gt_caption_locations):
       model_region_n = len(model_caption_locations)
       gt_region_n = len(gt_caption_locations)

@@ -141,7 +141,7 @@ def process_vg():
 		with open(vocab_path,'r') as f:
 			vocab = [line.strip() for line in f]
 
-	datasets = ['train', 'val', 'test','test_subset']
+	datasets = ['test_subset']
 	#datasets = ['test_subset']		
 	for split_name in datasets:
 		vocab = process_dataset(split_name, vocab=vocab)

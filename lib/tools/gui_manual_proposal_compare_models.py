@@ -6,21 +6,23 @@ import numpy as np
 from fast_rcnn.test_cap_manual_proposal import region_captioning, sentence
 from fast_rcnn.config import cfg
 import cv2
-show_input=False
+show_input=True
+show_pred=True
 class Interface(object):
     def __init__(self, image_path, image_list, vocabulary_path, models):
         self.ax = plt.axes([0,0,1,1])
-        self.colors = ['r','c','m','y','k']
+        self.colors = ['#ff0000','#3366ff']
         # init rectangles to be drawn
-        lw = 4
-        self.rect = Rectangle((0,0), 0, 0, fill=False, edgecolor='b',linewidth=lw)
+        lw = 6
+        self.rect = Rectangle((0,0), 0, 0, fill=False, edgecolor="#ffff00",linewidth=4)
         self.rect_predicted = []
         self.model_n = len(models)
         self.models = models
-        st = ('solid', 'dashed')
+        st = ((0,(16,8)), (0,(8,8)))
         for i in xrange(self.model_n):
             self.rect_predicted.append(Rectangle((0,0), 0, 0, fill=False, edgecolor=self.colors[i], linestyle=st[i], linewidth=lw))
             self.ax.add_patch(self.rect_predicted[-1])
+        
         # read vocabulary
         with open(vocabulary_path,'r') as f:
             self.vocab = [line.strip() for line in f]
@@ -29,6 +31,7 @@ class Interface(object):
         self.image_list = image_list
         self.image_id = 0
         self.image_path = image_path
+        self.legend_loc= {'1':'upper left', '2':'upper right','3':'lower left','4':'lower right'}
         print self.image_path, self.image_list[self.image_id]
         cur_image_path = self.image_path % self.image_list[self.image_id]
         
@@ -89,6 +92,9 @@ class Interface(object):
             if self.ax.legend_:
                 self.ax.legend_.remove()
             self.ax.figure.canvas.draw()
+          elif event.key in set(['1','2','3','4']):
+            self.ax.legend(loc=self.legend_loc[event.key],prop={'size':22})
+            self.ax.figure.canvas.draw()
           #if event.key == 'w':
           #  self.im_id+=1
           #  self.ax.figure.savefig('/home/ljyang/Desktop/figure_%d.png' % self.im_id, bbox_inches='tight')
@@ -115,9 +121,11 @@ class Interface(object):
             box_pred = boxes[0,:]
             caption = captions[0]
             caption_str = sentence(self.vocab, caption)
-            self.rect_predicted[i].set_width(box_pred[2] - box_pred[0])
-            self.rect_predicted[i].set_height(box_pred[3] - box_pred[1])
-            self.rect_predicted[i].set_xy((box_pred[0], box_pred[1]))
+            if show_pred:
+                self.rect_predicted[i].set_width(box_pred[2] - box_pred[0])
+                self.rect_predicted[i].set_height(box_pred[3] - box_pred[1])
+                self.rect_predicted[i].set_xy((box_pred[0], box_pred[1]))
+
             self.rect_predicted[i].set_label(caption_str)
      
             
@@ -131,14 +139,17 @@ def main():
         im_list = [line.strip() for line in f]
     vocab_path = 'data/visual_genome/1.0/vocabulary.txt'
     caffe.set_mode_gpu()
-    caffe.set_device(1)
+    caffe.set_device(3)
     models=[]
-    model_names = ('two_stage4_512_finetune','two_stage_context8_finetune3')
-    #model_names = ('two_stage_512_finetune','two_stage4_512_finetune')
-    recurrent_proto_names = ('test_cap_pred4_512','test_cap_pred_context8')
-    feature_proto_names = ('vgg_region_feature_given_box','vgg_region_global_feature_given_box')
-    #recurrent_proto_names = ('test_cap_pred_512','test_cap_pred4_512')
-    #feature_proto_names = ('vgg_region_feature_bbox_given_box', 'vgg_region_feature_given_box')
+    #model_names = ('two_lstm_context_ef_prod_finetune', 'two_stage_context8_finetune3')
+    #model_names = ('two_stage4_512_finetune','two_stage_context8_finetune3')
+    model_names = ('two_stage_512_finetune','two_stage4_512_finetune')
+    recurrent_proto_names = ('test_cap_pred_512','test_cap_pred4_512')
+    #recurrent_proto_names = ('test_cap_pred4_512','test_cap_pred_context8')
+    #recurrent_proto_names = ('test_cap_pred_two_lstm_context_ef','test_cap_pred_context8')
+    #feature_proto_names = ('vgg_region_feature_given_box','vgg_region_global_feature_given_box')
+    
+    feature_proto_names = ('vgg_region_feature_bbox_given_box', 'vgg_region_feature_given_box')
     for model_name, feature_proto_name, recurrent_proto_name in zip(model_names, feature_proto_names, recurrent_proto_names):
         model = {}
         caffemodel = 'output/faster_rcnn_end2end/vg_1.0_train/faster_rcnn_cap_%s_iter_200000.caffemodel' \
