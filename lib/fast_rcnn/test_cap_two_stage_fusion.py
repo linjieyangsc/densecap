@@ -141,10 +141,7 @@ def _greedy_search(embed_net, recurrent_net, forward_args, optional_args, propos
      #   recurrent_net.forward(**forward_args)
      #   forward_args['cont_sentence'][:] = 1
      #   forward_args['input_features'] = region_features
-    if 'global_features' in optional_args and 'fusion_features' in recurrent_net.blobs:
-        # need to manually set the fusion operation here
-        forward_args['fusion_features'] = forward_args['input_features'] * optional_args['global_features'].reshape(*(forward_args['input_features'].shape))
-    elif 'global_features' in optional_args:
+    if 'global_features' in recurrent_net.blobs and 'global_features' in optional_args:
         forward_args['global_features'] = optional_args['global_features'].reshape(*(forward_args['input_features'].shape))
     # reshape blobs
     for k, v in forward_args.iteritems():
@@ -197,7 +194,7 @@ def _greedy_search(embed_net, recurrent_net, forward_args, optional_args, propos
             break
     return pred_captions, pred_bbox_offsets, pred_logprobs
 
-def im_detect(feature_net, embed_net, recurrent_net, im, boxes=None, use_box_at = -1):
+def im_detect(feature_net, fusion_net, embed_net, recurrent_net, im, boxes=None, use_box_at = -1):
     """Detect object classes in an image given object proposals.
 
     Arguments:
@@ -242,12 +239,17 @@ def im_detect(feature_net, embed_net, recurrent_net, im, boxes=None, use_box_at 
     # global feature as an optional input: context
     if 'global_features' in feature_net.blobs:
         #changed according to the global feature shape
-        opt_args['global_features'] = np.tile(feature_net.blobs['global_features'].data, (1,proposal_n,1)) 
+        opt_args['global_features'] = np.tile(feature_net.blobs['global_features'].data, (1,proposal_n,1)).reshape(*(region_features.shape)) 
     
     # constant image features as an optional input
     if 'image_features' in recurrent_net.blobs:
         feat_args['image_features'] = region_features.copy()
-    
+    if 'fusion_features' in recurrent_net.blobs:
+        fusion_net.blobs['region_features'].reshape(*(region_features.shape))
+        fusion_net.blobs['global_features'].reshape(*(region_features.shape))
+        fusion_out = fusion_net.forward(region_features = region_features, global_features=opt_args['global_features'])
+        feat_args['fusion_features'] = fusion_out['fusion_features']
+
     bbox_pred_direct = ('bbox_pred' in feature_net.blobs)
 
     if bbox_pred_direct:
@@ -278,7 +280,7 @@ def im_detect(feature_net, embed_net, recurrent_net, im, boxes=None, use_box_at 
     #     pred_box_all.append(pred_box_list)
     return scores, pred_boxes, captions
 
-def vis_detections(im_path, im, captions, dets, thresh=0.5, save_path='vis'):
+def vis_detections(im_path, im, captions, dets, thresh=0.6, save_path='vis'):
     """Visual debugging of detections by saving images with detected bboxes."""
     #add html generation for better visualization
 
@@ -312,7 +314,7 @@ def sentence(vocab, vocab_indices):
       sentence = sentence[:-len(suffix)]
     return sentence
 
-def test_net(feature_net, embed_net, recurrent_net, imdb, vis=True, use_box_at = -1):
+def test_net(feature_net, fusion_net, embed_net, recurrent_net, imdb, vis=True, use_box_at = -1):
     """Test a Fast R-CNN network on an image database."""
     num_images = len(imdb.image_index)
     if DEBUG:
@@ -347,7 +349,7 @@ def test_net(feature_net, embed_net, recurrent_net, imdb, vis=True, use_box_at =
 
         im = cv2.imread(imdb.image_path_at(i))
         _t['im_detect'].tic()
-        scores, boxes, captions = im_detect(feature_net, embed_net, recurrent_net, im, box_proposals, use_box_at=use_box_at)
+        scores, boxes, captions = im_detect(feature_net, fusion_net, embed_net, recurrent_net, im, box_proposals, use_box_at=use_box_at)
         _t['im_detect'].toc()
 
         _t['misc'].tic()
@@ -365,9 +367,6 @@ def test_net(feature_net, embed_net, recurrent_net, imdb, vis=True, use_box_at =
         pos_scores = scores[keep]
         pos_captions = [sentence(vocab, captions[idx]) for idx in keep]
         pos_boxes = boxes[keep,:]
-        if vis:
-            #TODO(Linjie): display location sequence
-            vis_detections(imdb.image_path_at(i), im, pos_captions, pos_dets, save_path = os.path.join(output_dir,'vis'))
         all_regions[i] = []
         #follow the format of baseline models routine
         for cap, box, prob in zip(pos_captions, pos_boxes, pos_scores):

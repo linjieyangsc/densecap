@@ -20,6 +20,7 @@ import json
 from utils.blob import im_list_to_blob
 import os
 import sys
+from collections import defaultdict
 #sys.path.append('lib/')
 from utils.bbox_utils import region_merge, get_bbox_coord
 COCO_EVAL_PATH = 'coco-caption/'
@@ -278,7 +279,7 @@ def im_detect(feature_net, embed_net, recurrent_net, im, boxes=None, use_box_at 
     #     pred_box_all.append(pred_box_list)
     return scores, pred_boxes, captions
 
-def vis_detections(im_path, im, captions, dets, thresh=0.5, save_path='vis'):
+def vis_detections(im_path, im, captions, dets, thresh=0.6, save_path='vis'):
     """Visual debugging of detections by saving images with detected bboxes."""
     #add html generation for better visualization
 
@@ -319,7 +320,9 @@ def test_net(feature_net, embed_net, recurrent_net, imdb, vis=True, use_box_at =
         print 'number of images: %d' % num_images
     # all detections are collected into:
     #    all_regions[image] = list of {'image_id', caption', 'location', 'location_seq'}
-    all_regions = [None] * num_images
+    all_regions = {}
+    for cap_len in range(3,7):
+      all_regions[cap_len] = [None] * num_images
     results = {}
     output_dir = get_output_dir(imdb, feature_net)
 
@@ -348,6 +351,7 @@ def test_net(feature_net, embed_net, recurrent_net, imdb, vis=True, use_box_at =
         im = cv2.imread(imdb.image_path_at(i))
         _t['im_detect'].tic()
         scores, boxes, captions = im_detect(feature_net, embed_net, recurrent_net, im, box_proposals, use_box_at=use_box_at)
+        
         _t['im_detect'].toc()
 
         _t['misc'].tic()
@@ -357,41 +361,39 @@ def test_net(feature_net, embed_net, recurrent_net, imdb, vis=True, use_box_at =
             print scores.shape
         
        
-  
+ 
+ 				
         pos_dets = np.hstack((boxes, scores[:,np.newaxis])) \
             .astype(np.float32, copy=False)
         keep = nms(pos_dets, cfg.TEST.NMS)
-        pos_dets = pos_dets[keep, :]
-        pos_scores = scores[keep]
-        pos_captions = [sentence(vocab, captions[idx]) for idx in keep]
-        pos_boxes = boxes[keep,:]
-        if vis:
-            #TODO(Linjie): display location sequence
-            vis_detections(imdb.image_path_at(i), im, pos_captions, pos_dets, save_path = os.path.join(output_dir,'vis'))
-        all_regions[i] = []
-        #follow the format of baseline models routine
-        for cap, box, prob in zip(pos_captions, pos_boxes, pos_scores):
-            anno = {'image_id':i, 'prob': format(prob,'.3f'), 'caption':cap, \
-            'location': box.tolist()}
-            all_regions[i].append(anno)
-        key = imdb.image_path_at(i).split('/')[-1]
-        results[key] = {}
-        results[key]['boxes'] = pos_boxes.tolist()
-        results[key]['logprobs'] = np.log(pos_scores + eps).tolist()
-        results[key]['captions'] = pos_captions
         
+        #record number 3,4,5 captions
+        caption_lens = [len(captions[idx]) for idx in keep]
+        caption_len_d = defaultdict(list)
+        for idx,item in enumerate(caption_lens):
+          caption_len_d[item].append(keep[idx])
+        
+        for caption_len in range(3,7):
+          if caption_len < 6: #3,4,5
+            subset = caption_len_d[caption_len]
+          else: # all captions
+            subset = keep 
 
-        
+          pos_scores = scores[subset]
+          pos_captions = [sentence(vocab, captions[idx]) for idx in subset]
+          pos_boxes = boxes[subset,:]
+          all_regions[caption_len][i] = []
+          #follow the format of baseline models routine
+          for cap, box, prob in zip(pos_captions, pos_boxes, pos_scores):
+              anno = {'image_id':i, 'prob': format(prob,'.3f'), 'caption':cap, \
+              'location': box.tolist()}
+              all_regions[caption_len][i].append(anno)
+        #all captions
         _t['misc'].toc()
 
         print 'im_detect: {:d}/{:d} {:.3f}s {:.3f}s' \
               .format(i + 1, num_images, _t['im_detect'].average_time,
                       _t['misc'].average_time)
-    # write file for evaluation with Torch code from Justin
-    print 'write to result.json'
-    det_file = os.path.join(output_dir, 'results.json')
-    with open(det_file, 'w') as f:
-        json.dump(results, f)
 
     print 'Evaluating detections'
     #imdb.evaluate_detections(all_regions, output_dir)
@@ -413,7 +415,10 @@ def test_net(feature_net, embed_net, recurrent_net, imdb, vis=True, use_box_at =
         assert(len(new_gt_regions) > 0)
         gt_regions_merged[i] = region_merge(new_gt_regions)
     image_ids = range(num_images)
-    vg_evaluator = VgEvalCap(gt_regions_merged, all_regions)
-    vg_evaluator.params['image_id'] = image_ids
-    vg_evaluator.evaluate()
+    for cap_len in range(3,7):
+      vg_evaluator = VgEvalCap(gt_regions_merged, all_regions[cap_len])
+      vg_evaluator.params['image_id'] = image_ids
+      vg_evaluator.evaluate()
+
+
 

@@ -11,14 +11,17 @@ class Interface(object):
     def __init__(self, image_path, image_list, vocabulary_path, feature_net, embed_net, recurrent_net, max_timesteps):
         self.ax = plt.axes([0,0,1,1])
         #colors should be a linear transformation of one to another
-        self.start_color = np.array((0.8, 0.8, 0.8)) # blue
-        self.end_color = np.array((0.3, 0.3, 0.3)) # magnita
+        self.start_color = np.array((1, 0.5, 0.)) # blue
+        self.end_color = np.array((1, 1, 0.5)) # magnita
         #self.colors = ['g','r','c','m','y','k']
         # init rectangles to be drawn
-        self.rect = Rectangle((0,0), 0, 0, fill=False, edgecolor='b', linewidth=2)
+        lw=4
+        self.rect = Rectangle((0,0), 0, 0, fill=False, edgecolor=self.start_color, linewidth=lw)
+        self.rect.set_label('proposal')
+        self.ax.add_patch(self.rect)
         self.rect_predicted = []
         for i in xrange(max_timesteps):
-            self.rect_predicted.append(Rectangle((0,0), 0, 0, fill=False, linewidth=2))
+            self.rect_predicted.append(Rectangle((0,0), 0, 0, fill=False, linewidth=lw))
             self.ax.add_patch(self.rect_predicted[-1])
         # read vocabulary
         with open(vocabulary_path,'r') as f:
@@ -28,6 +31,7 @@ class Interface(object):
         self.image_list = image_list
         self.image_id = 0
         self.image_path = image_path
+        self.legend_loc= {'1':'upper left', '2':'upper right','3':'lower left','4':'lower right'}
         print self.image_path, self.image_list[self.image_id]
         print 'loading image #%d, name: %s' % (self.image_id, self.image_list[self.image_id])
         cur_image_path = self.image_path % self.image_list[self.image_id]
@@ -45,7 +49,7 @@ class Interface(object):
         self.ax.axis('off')
         self.ax.imshow(self.disp_im, aspect='auto')
 
-        self.ax.add_patch(self.rect)
+        
         self.ax.figure.canvas.mpl_connect('button_press_event', self.button_press)
         self.ax.figure.canvas.mpl_connect('button_release_event', self.button_release)
 
@@ -68,11 +72,16 @@ class Interface(object):
             self.image_id = (self.image_id - 10) % len(self.image_list)
           elif event.key == 't':
             self.image_id = (self.image_id + 10) % len(self.image_list)
-          if event.key in set(['d','e','g','t']):
-            
-            # update image to show
-            print 'loading image #%d, name: %s' % (self.image_id, self.image_list[self.image_id])
-            cur_image_path = self.image_path % self.image_list[self.image_id]
+          elif event.key == 'q':
+            self.image_name = raw_input()
+          if event.key in set(['d','e','g','t', 'q']):
+            if event.key == 'q':
+                cur_image_path = self.image_path % self.image_name
+            else:
+          
+                # update image to show
+                print 'loading image #%d, name: %s' % (self.image_id, self.image_list[self.image_id])
+                cur_image_path = self.image_path % self.image_list[self.image_id]
             
             self.im = cv2.imread(cur_image_path)
             self.disp_im = cv2.cvtColor(self.im, cv2.COLOR_BGR2RGB)
@@ -88,6 +97,9 @@ class Interface(object):
             self.rect.set_xy((0, 0))
             if self.ax.legend_:
                 self.ax.legend_.remove()
+            self.ax.figure.canvas.draw()
+          elif event.key in set(['1','2','3','4']):
+            self.ax.legend(loc=self.legend_loc[event.key],prop={'size':22})
             self.ax.figure.canvas.draw()
           #if event.key == 'w':
           #  self.im_id+=1
@@ -113,14 +125,14 @@ class Interface(object):
         #caption_str = sentence(self.vocab, captions[0])
         assert(len(captions[0]) == boxes.shape[0])
         words = [self.vocab[w] for w in captions[0][:-1]]
-        words.insert(0,'<start>')
+        words.insert(0,'<SOS>')
         for i, box, word in zip(range(len(boxes)), boxes, words):
             
             self.rect_predicted[i].set_width(box[2] - box[0])
             self.rect_predicted[i].set_height(box[3] - box[1])
             self.rect_predicted[i].set_xy((box[0], box[1]))
             self.rect_predicted[i].set_label(word)
-            new_color = self.start_color + (self.end_color - self.start_color) * float(i) / (len(boxes) - 1)
+            new_color = self.start_color + (self.end_color - self.start_color) * float(i + 1) / (len(boxes))
             self.rect_predicted[i].set_edgecolor(new_color)
         for i in range(len(boxes), self.max_timesteps):
             self.rect_predicted[i].set_width(0)
@@ -128,7 +140,7 @@ class Interface(object):
             self.rect_predicted[i].set_xy((0, 0))
             self.rect_predicted[i].set_label('')
             
-        self.ax.legend(loc='best')
+        self.ax.legend(loc='best',prop={'size':22})
         self.ax.figure.canvas.draw()
 
 def main():
@@ -140,7 +152,7 @@ def main():
     caffe.set_mode_gpu()
     caffe.set_device(0)
     args={}
-    args['caffemodel'] = 'output/faster_rcnn_end2end/vg_train/faster_rcnn_cap_two_stage_context8_finetune3_iter_200000.caffemodel'
+    args['caffemodel'] = 'output/faster_rcnn_end2end/vg_1.0_train/faster_rcnn_cap_two_stage_context8_finetune3_iter_200000.caffemodel'
     
     args['feature_prototxt'] = 'models/faster_rcnn_cap/vgg_region_global_feature_given_box.prototxt'
     args['embed_prototxt'] = 'models/faster_rcnn_cap/test_word_embedding_512.prototxt'
