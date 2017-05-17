@@ -14,7 +14,7 @@ layer {
     mean_value: 123
   }
   image_data_param {
-    source: "/media/researchshare/linjie/work/video_caption/captioning/train_list_all.txt"
+    source: "/raid/ljyang/work/captioning/captioning/train_list_all.txt"
     batch_size: 100
     new_height: 256
     new_width: 256
@@ -53,7 +53,7 @@ layer {
     mean_value: 123
   }
   image_data_param {
-    source: "/media/researchshare/linjie/work/video_caption/captioning/val_list_all.txt"
+    source: "/raid/ljyang/work/captioning/captioning/val_list_all.txt"
     batch_size: 100
     new_height: 256
     new_width: 256

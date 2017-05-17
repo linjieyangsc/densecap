@@ -137,10 +137,10 @@ if not IMAGE_FIRST:
 	OUTPUT_DIR = './models/lstm/h5_data_distill/buffer_%d' % (BUFFER_SIZE)
 else:
 	OUTPUT_DIR = './models/lstm/h5_data_distill2/buffer_%d' % (BUFFER_SIZE)
-SPLITS_PATTERN = '/media/researchshare/linjie/work/video_caption/captioning/%s_list_all.txt'
-SPLITS_CAP_PATTERN = '/media/researchshare/linjie/work/video_caption/captioning/%s_list_cap_all.txt'
+SPLITS_PATTERN = '/raid/ljyang/work/captioning/captioning/%s_list_all.txt'
+SPLITS_CAP_PATTERN = '/raid/ljyang/work/captioning/captioning/%s_list_cap_all.txt'
 OUTPUT_DIR_PATTERN = '%s/%%s_batches' % OUTPUT_DIR
-VOCAB_OUT_PATH = './models/lstm/h5_data_distill/buffer_100/vocabulary' 
+VOCAB_OUT_PATH = '%s/vocabulary' % OUTPUT_DIR
 def process_dataset(split_name, dt_split_name, batch_stream_length, vocab=None):
 	with open(SPLITS_PATTERN % split_name, 'r') as split_file:
 		split_images = [line[:-1] for line in split_file]
@@ -162,10 +162,6 @@ def process_dataset(split_name, dt_split_name, batch_stream_length, vocab=None):
 	return sg.vocabulary_inverted
 def process_dt():
 	vocab=None
-	vocab = []
-	with open(VOCAB_OUT_PATH,'r') as f:
-		for line in f:
-			vocab.append(line.strip())
 	datasets = [
 	('train','train',100000),
 	('val','val',100000),

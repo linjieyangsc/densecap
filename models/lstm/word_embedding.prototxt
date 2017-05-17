@@ -9,7 +9,7 @@ layer {
   top: "word_embedding"
     embed_param {
     input_dim: 15001
-    num_output: 1000
+    num_output: 512
     bias_term: false
   }
 }

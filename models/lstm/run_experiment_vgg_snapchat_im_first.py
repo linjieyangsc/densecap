@@ -11,10 +11,10 @@ import time
 # seed the RNG so we evaluate on the same subset each time
 np.random.seed(seed=0)
 sys.path.append('./examples/coco_caption/')  
-from dreamstime_to_hdf5_data import *
+from dt_to_hdf5_data import *
 from captioner_im_first import Captioner
 
-COCO_EVAL_PATH = '/media/researchshare/linjie/data/MS_COCO/coco-caption/'
+COCO_EVAL_PATH = './coco-caption/'
 sys.path.append(COCO_EVAL_PATH)
 from pycocoevalcap.dt_eval import DtEvalCap
 
@@ -48,7 +48,7 @@ class CaptionExperiment():
     if os.path.exists(descriptor_filename):
       self.descriptors = np.load(descriptor_filename)['descriptors']
     else:
-      self.descriptors = self.captioner.compute_descriptors(self.images)
+      self.descriptors = self.captioner.compute_descriptors(self.images, output_name = 'image_feature')
       np.savez_compressed(descriptor_filename, descriptors=self.descriptors)
 
   def caption_stats(self, image_index, caption_scores):
@@ -215,14 +215,14 @@ def main():
   if MAX_IMAGES >= 0:
     TAG += '_%dimages' % MAX_IMAGES
   ITER = 100000
-  MODEL_FILENAME = 'lrcn_finetune_googlenet_iter_%d' % ITER
+  MODEL_FILENAME = 'lrcn_finetune3_googlenet_iter_%d' % ITER
   DATASET_NAME = 'snapchat'
   TAG += '_%s' % DATASET_NAME
-  MODEL_DIR = './models/lstm/demo2'
+  MODEL_DIR = './models/lstm/results'
   MODEL_FILE = '%s/%s.caffemodel' % (MODEL_DIR, MODEL_FILENAME)
-  IMAGE_NET_FILE = './models/lstm/demo2/googlenet.deploy.prototxt'
-  WORD_EMBEDDING_FILE = './models/lstm/demo2/word_embedding.prototxt'
-  LSTM_NET_FILE = './models/lstm/demo2/lrcn_word_to_preds.min.deploy.prototxt'
+  IMAGE_NET_FILE = './models/lstm/googlenet.deploy.prototxt'
+  WORD_EMBEDDING_FILE = './models/lstm/word_embedding.prototxt'
+  LSTM_NET_FILE = './models/lstm/lrcn_word_to_preds.min.deploy.prototxt'
   NET_TAG = '%s_%s' % (TAG, MODEL_FILENAME)
   DATASET_SUBDIR = '%s/%s_ims' % (DATASET_NAME,
       str(MAX_IMAGES) if MAX_IMAGES >= 0 else 'all')
@@ -233,7 +233,7 @@ def main():
     vocab = [line.strip() for line in vocab_file.readlines()]
   #coco = COCO(COCO_ANNO_PATH % DATASET_NAME)
   #image_root = '/media/researchshare/linjie/data/dreamstime/images'#COCO_IMAGE_PATTERN % DATASET_NAME
-  eval_image_file = '/media/researchshare/linjie/work/video_caption/snapchat/test_im_list_cap.txt'
+  eval_image_file = '/raid/ljyang/work/captioning/snapchat/test_im_list_cap.txt'
   #eval_caption_file = '/home/a-linjieyang/work/video_caption/dreamstime/val_list_cap.txt'
   with open(eval_image_file, 'r') as split_file:
     split_images = [line.strip() for line in split_file]

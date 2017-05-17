@@ -12,14 +12,14 @@ net: "./models/lstm/lrcn.googlenet.prototxt"
 base_lr: 0.001
 lr_policy: "step"
 gamma: 0.5
-stepsize: 100000
+stepsize: 40000
 display: 20
-max_iter: 200000
+max_iter: 100000
 momentum: 0.9
 weight_decay: 0.00005
-snapshot: 50000
-snapshot_prefix: "./models/lstm/lrcn_finetune_googlenet"
+snapshot: 20000
+snapshot_prefix: "./models/lstm/results/lrcn_finetune3_googlenet"
 solver_mode: GPU
 random_seed: 1701
 average_loss: 100
-clip_gradients: 20
+clip_gradients:40

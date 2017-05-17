@@ -10,13 +10,13 @@ from PIL import Image
 class CaptioningService():
   def __init__(self):
     #initialize networks
-    ITER = 200000
-    MODEL_FILENAME = 'lrcn3_finetune_vgg_iter_%d' % ITER
+    ITER = 100000
+    MODEL_FILENAME = 'lrcn_finetune_googlenet_iter_%d' % ITER
 
     MODEL_FILE = '%s.caffemodel' % (MODEL_FILENAME)
-    IMAGE_NET_FILE = 'vgg.deploy.prototxt'
+    IMAGE_NET_FILE = 'googlenet.deploy.prototxt'
     WORD_EMBEDDING_FILE = 'word_embedding.prototxt'
-    LSTM_NET_FILE = 'lrcn3_word_to_preds.deploy.prototxt'
+    LSTM_NET_FILE = 'lrcn_word_to_preds.min.deploy.prototxt'
     VOCAB_FILE = 'vocabulary'
     # DEVICE_ID < 0 for CPU, otherwise for GPU
     DEVICE_ID = -1
@@ -26,8 +26,8 @@ class CaptioningService():
   def process(self, image):
     #record the processing time
     t1 = time.time()
-    descriptor = self.captioner.compute_descriptor(image)
-    t2 = time.time() 
+    descriptor = self.captioner.compute_descriptor(image, output_name='image_feature')
+    t2 = time.time()
     caption, log_prob = self.captioner.predict_caption(descriptor)
     res = self.format_json(caption, log_prob)
     t3 = time.time()
