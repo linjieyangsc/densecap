@@ -5,7 +5,7 @@
 #include "caffe/common.hpp"
 #include "caffe/filler.hpp"
 #include "caffe/layer.hpp"
-#include "caffe/sequence_layers.hpp"
+#include "caffe/layers/lstm_layer.hpp"
 #include "caffe/util/math_functions.hpp"
 
 namespace caffe {
@@ -20,7 +20,7 @@ void LSTMLayer<Dtype>::RecurrentInputBlobNames(vector<string>* names) const {
 template <typename Dtype>
 void LSTMLayer<Dtype>::RecurrentOutputBlobNames(vector<string>* names) const {
   names->resize(2);
-  (*names)[0] = "h_" + this->int_to_str(this->T_);
+  (*names)[0] = "h_" + format_int(this->T_);
   (*names)[1] = "c_T";
 }
 
@@ -72,9 +72,9 @@ void LSTMLayer<Dtype>::FillUnrolledNet(NetParameter* net_param) const {
   sum_param.mutable_eltwise_param()->set_operation(
       EltwiseParameter_EltwiseOp_SUM);
 
-  LayerParameter scalar_param;
-  scalar_param.set_type("Scalar");
-  scalar_param.mutable_scalar_param()->set_axis(0);
+  LayerParameter scale_param;
+  scale_param.set_type("Scale");
+  scale_param.mutable_scale_param()->set_axis(0);
 
   LayerParameter slice_param;
   slice_param.set_type("Slice");
@@ -87,11 +87,15 @@ void LSTMLayer<Dtype>::FillUnrolledNet(NetParameter* net_param) const {
   RecurrentInputShapes(&input_shapes);
   CHECK_EQ(2, input_shapes.size());
 
-  net_param->add_input("c_0");
-  net_param->add_input_shape()->CopyFrom(input_shapes[0]);
+  LayerParameter* input_layer_param = net_param->add_layer();
+  input_layer_param->set_type("Input");
+  InputParameter* input_param = input_layer_param->mutable_input_param();
 
-  net_param->add_input("h_0");
-  net_param->add_input_shape()->CopyFrom(input_shapes[1]);
+  input_layer_param->add_top("c_0");
+  input_param->add_shape()->CopyFrom(input_shapes[0]);
+
+  input_layer_param->add_top("h_0");
+  input_param->add_shape()->CopyFrom(input_shapes[1]);
 
   LayerParameter* cont_slice_param = net_param->add_layer();
   cont_slice_param->CopyFrom(slice_param);
@@ -109,6 +113,7 @@ void LSTMLayer<Dtype>::FillUnrolledNet(NetParameter* net_param) const {
     x_transform_param->add_param()->set_name("b_c");
     x_transform_param->add_bottom("x");
     x_transform_param->add_top("W_xc_x");
+    x_transform_param->add_propagate_down(true);
   }
 
   if (this->static_input_) {
@@ -121,6 +126,7 @@ void LSTMLayer<Dtype>::FillUnrolledNet(NetParameter* net_param) const {
     x_static_transform_param->add_param()->set_name("W_xc_static");
     x_static_transform_param->add_bottom("x_static");
     x_static_transform_param->add_top("W_xc_x_static_preshape");
+    x_static_transform_param->add_propagate_down(true);
 
     LayerParameter* reshape_param = net_param->add_layer();
     reshape_param->set_type("Reshape");
@@ -131,6 +137,7 @@ void LSTMLayer<Dtype>::FillUnrolledNet(NetParameter* net_param) const {
     new_shape->add_dim(-1);
     new_shape->add_dim(
         x_static_transform_param->inner_product_param().num_output());
+    reshape_param->set_name("W_xc_x_static_reshape");
     reshape_param->add_bottom("W_xc_x_static_preshape");
     reshape_param->add_top("W_xc_x_static");
   }
@@ -147,8 +154,8 @@ void LSTMLayer<Dtype>::FillUnrolledNet(NetParameter* net_param) const {
   output_concat_layer.mutable_concat_param()->set_axis(0);
 
   for (int t = 1; t <= this->T_; ++t) {
-    string tm1s = this->int_to_str(t - 1);
-    string ts = this->int_to_str(t);
+    string tm1s = format_int(t - 1);
+    string ts = format_int(t);
 
     cont_slice_param->add_top("cont_" + ts);
     x_slice_param->add_top("W_xc_x_" + ts);
@@ -162,7 +169,7 @@ void LSTMLayer<Dtype>::FillUnrolledNet(NetParameter* net_param) const {
     //                       0   otherwise
     {
       LayerParameter* cont_h_param = net_param->add_layer();
-      cont_h_param->CopyFrom(scalar_param);
+      cont_h_param->CopyFrom(scale_param);
       cont_h_param->set_name("h_conted_" + tm1s);
       cont_h_param->add_bottom("h_" + tm1s);
       cont_h_param->add_bottom("cont_" + ts);
@@ -225,7 +232,7 @@ void LSTMLayer<Dtype>::FillUnrolledNet(NetParameter* net_param) const {
   {
     LayerParameter* c_T_copy_param = net_param->add_layer();
     c_T_copy_param->CopyFrom(split_param);
-    c_T_copy_param->add_bottom("c_" + this->int_to_str(this->T_));
+    c_T_copy_param->add_bottom("c_" + format_int(this->T_));
     c_T_copy_param->add_top("c_T");
   }
   net_param->add_layer()->CopyFrom(output_concat_layer);

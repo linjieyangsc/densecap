@@ -6,7 +6,7 @@
 #include "caffe/blob.hpp"
 #include "caffe/common.hpp"
 #include "caffe/filler.hpp"
-#include "caffe/sequence_layers.hpp"
+#include "caffe/layers/lstm_layer.hpp"
 
 #include "caffe/test/test_caffe_main.hpp"
 #include "caffe/test/test_gradient_check_util.hpp"
@@ -20,11 +20,11 @@ class LSTMLayerTest : public MultiDeviceTest<TypeParam> {
  protected:
   LSTMLayerTest() : num_output_(7) {
     blob_bottom_vec_.push_back(&blob_bottom_);
-    blob_bottom_vec_.push_back(&blob_bottom_flush_);
+    blob_bottom_vec_.push_back(&blob_bottom_cont_);
     blob_top_vec_.push_back(&blob_top_);
     unit_blob_bottom_vec_.push_back(&unit_blob_bottom_c_prev_);
     unit_blob_bottom_vec_.push_back(&unit_blob_bottom_x_);
-    unit_blob_bottom_vec_.push_back(&unit_blob_bottom_flush_);
+    unit_blob_bottom_vec_.push_back(&unit_blob_bottom_cont_);
     unit_blob_top_vec_.push_back(&unit_blob_top_c_);
     unit_blob_top_vec_.push_back(&unit_blob_top_h_);
 
@@ -45,10 +45,11 @@ class LSTMLayerTest : public MultiDeviceTest<TypeParam> {
 
   void ReshapeBlobs(int num_timesteps, int num_instances) {
     blob_bottom_.Reshape(num_timesteps, num_instances, 3, 2);
+    blob_bottom_static_.Reshape(num_instances, 2, 3, 4);
     vector<int> shape(2);
     shape[0] = num_timesteps;
     shape[1] = num_instances;
-    blob_bottom_flush_.Reshape(shape);
+    blob_bottom_cont_.Reshape(shape);
     shape.push_back(num_output_);
 
     shape[0] = 1; shape[1] = num_instances; shape[2] = 4 * num_output_;
@@ -57,7 +58,7 @@ class LSTMLayerTest : public MultiDeviceTest<TypeParam> {
     unit_blob_bottom_c_prev_.Reshape(shape);
     shape.resize(2);
     shape[0] = 1; shape[1] = num_instances;
-    unit_blob_bottom_flush_.Reshape(shape);
+    unit_blob_bottom_cont_.Reshape(shape);
 
     FillerParameter filler_param;
     filler_param.set_min(-1);
@@ -71,12 +72,13 @@ class LSTMLayerTest : public MultiDeviceTest<TypeParam> {
   int num_output_;
   LayerParameter layer_param_;
   Blob<Dtype> blob_bottom_;
-  Blob<Dtype> blob_bottom_flush_;
+  Blob<Dtype> blob_bottom_cont_;
+  Blob<Dtype> blob_bottom_static_;
   Blob<Dtype> blob_top_;
   vector<Blob<Dtype>*> blob_bottom_vec_;
   vector<Blob<Dtype>*> blob_top_vec_;
 
-  Blob<Dtype> unit_blob_bottom_flush_;
+  Blob<Dtype> unit_blob_bottom_cont_;
   Blob<Dtype> unit_blob_bottom_c_prev_;
   Blob<Dtype> unit_blob_bottom_x_;
   Blob<Dtype> unit_blob_top_c_;
@@ -103,12 +105,12 @@ TYPED_TEST(LSTMLayerTest, TestForward) {
   const int num = this->blob_bottom_.shape(1);
   this->ReshapeBlobs(kNumTimesteps, num);
 
-  // Fill the flush blob with <0, 1, 1, ..., 1>,
+  // Fill the cont blob with <0, 1, 1, ..., 1>,
   // indicating a sequence that begins at the first timestep
   // then continues for the rest of the sequence.
   for (int t = 0; t < kNumTimesteps; ++t) {
     for (int n = 0; n < num; ++n) {
-      this->blob_bottom_flush_.mutable_cpu_data()[t * num + n] = t > 0;
+      this->blob_bottom_cont_.mutable_cpu_data()[t * num + n] = t > 0;
     }
   }
 
@@ -144,7 +146,7 @@ TYPED_TEST(LSTMLayerTest, TestForward) {
     caffe_copy(bottom_count, bottom_copy.cpu_data() + t * bottom_count,
                this->blob_bottom_.mutable_cpu_data());
     for (int n = 0; n < num; ++n) {
-      this->blob_bottom_flush_.mutable_cpu_data()[n] = t > 0;
+      this->blob_bottom_cont_.mutable_cpu_data()[n] = t > 0;
     }
     LOG(INFO) << "Calling forward for LSTM timestep " << t;
     layer->Forward(this->blob_bottom_vec_, this->blob_top_vec_);
@@ -156,7 +158,7 @@ TYPED_TEST(LSTMLayerTest, TestForward) {
     }
   }
 
-  // Process the batch one timestep at a time with all flush blobs set to 0.
+  // Process the batch one timestep at a time with all cont blobs set to 0.
   // Check that we get a different result, except in the first timestep.
   Caffe::set_random_seed(1701);
   layer.reset(new LSTMLayer<Dtype>(this->layer_param_));
@@ -165,7 +167,7 @@ TYPED_TEST(LSTMLayerTest, TestForward) {
     caffe_copy(bottom_count, bottom_copy.cpu_data() + t * bottom_count,
                this->blob_bottom_.mutable_cpu_data());
     for (int n = 0; n < num; ++n) {
-      this->blob_bottom_flush_.mutable_cpu_data()[n] = 0;
+      this->blob_bottom_cont_.mutable_cpu_data()[n] = 0;
     }
     LOG(INFO) << "Calling forward for LSTM timestep " << t;
     layer->Forward(this->blob_bottom_vec_, this->blob_top_vec_);
@@ -204,25 +206,25 @@ TYPED_TEST(LSTMLayerTest, TestLSTMUnitGradient) {
   LayerParameter layer_param;
   LSTMUnitLayer<Dtype> layer(layer_param);
   GradientChecker<Dtype> checker(1e-2, 1e-3);
-  Dtype* flush_data = this->blob_bottom_flush_.mutable_cpu_data();
-  flush_data[0] = 0;
-  flush_data[1] = 0;
-  flush_data[2] = 0;
+  Dtype* cont_data = this->blob_bottom_cont_.mutable_cpu_data();
+  cont_data[0] = 0;
+  cont_data[1] = 0;
+  cont_data[2] = 0;
   checker.CheckGradientExhaustive(&layer, this->unit_blob_bottom_vec_,
       this->unit_blob_top_vec_, 0);
   checker.CheckGradientExhaustive(&layer, this->unit_blob_bottom_vec_,
       this->unit_blob_top_vec_, 1);
 }
 
-TYPED_TEST(LSTMLayerTest, TestLSTMUnitGradientNonZeroFlush) {
+TYPED_TEST(LSTMLayerTest, TestLSTMUnitGradientNonZeroCont) {
   typedef typename TypeParam::Dtype Dtype;
   LayerParameter layer_param;
   LSTMUnitLayer<Dtype> layer(layer_param);
   GradientChecker<Dtype> checker(1e-2, 1e-3);
-  Dtype* flush_data = this->blob_bottom_flush_.mutable_cpu_data();
-  flush_data[0] = 1;
-  flush_data[1] = 0;
-  flush_data[2] = 1;
+  Dtype* cont_data = this->blob_bottom_cont_.mutable_cpu_data();
+  cont_data[0] = 1;
+  cont_data[1] = 0;
+  cont_data[2] = 1;
   checker.CheckGradientExhaustive(&layer, this->unit_blob_bottom_vec_,
       this->unit_blob_top_vec_, 0);
   checker.CheckGradientExhaustive(&layer, this->unit_blob_bottom_vec_,
@@ -237,18 +239,18 @@ TYPED_TEST(LSTMLayerTest, TestGradient) {
       this->blob_top_vec_, 0);
 }
 
-TYPED_TEST(LSTMLayerTest, TestGradientNonZeroFlush) {
+TYPED_TEST(LSTMLayerTest, TestGradientNonZeroCont) {
   typedef typename TypeParam::Dtype Dtype;
   LSTMLayer<Dtype> layer(this->layer_param_);
   GradientChecker<Dtype> checker(1e-2, 1e-3);
-  for (int i = 0; i < this->blob_bottom_flush_.count(); ++i) {
-    this->blob_bottom_flush_.mutable_cpu_data()[i] = i > 2;
+  for (int i = 0; i < this->blob_bottom_cont_.count(); ++i) {
+    this->blob_bottom_cont_.mutable_cpu_data()[i] = i > 2;
   }
   checker.CheckGradientExhaustive(&layer, this->blob_bottom_vec_,
       this->blob_top_vec_, 0);
 }
 
-TYPED_TEST(LSTMLayerTest, TestGradientNonZeroFlushBufferSize2) {
+TYPED_TEST(LSTMLayerTest, TestGradientNonZeroContBufferSize2) {
   typedef typename TypeParam::Dtype Dtype;
   this->ReshapeBlobs(2, 2);
   FillerParameter filler_param;
@@ -256,11 +258,31 @@ TYPED_TEST(LSTMLayerTest, TestGradientNonZeroFlushBufferSize2) {
   filler.Fill(&this->blob_bottom_);
   LSTMLayer<Dtype> layer(this->layer_param_);
   GradientChecker<Dtype> checker(1e-2, 1e-3);
-  for (int i = 0; i < this->blob_bottom_flush_.count(); ++i) {
-    this->blob_bottom_flush_.mutable_cpu_data()[i] = i > 2;
+  for (int i = 0; i < this->blob_bottom_cont_.count(); ++i) {
+    this->blob_bottom_cont_.mutable_cpu_data()[i] = i > 2;
   }
   checker.CheckGradientExhaustive(&layer, this->blob_bottom_vec_,
       this->blob_top_vec_, 0);
 }
+
+TYPED_TEST(LSTMLayerTest, TestGradientNonZeroContBufferSize2WithStaticInput) {
+  typedef typename TypeParam::Dtype Dtype;
+  this->ReshapeBlobs(2, 2);
+  FillerParameter filler_param;
+  UniformFiller<Dtype> filler(filler_param);
+  filler.Fill(&this->blob_bottom_);
+  filler.Fill(&this->blob_bottom_static_);
+  this->blob_bottom_vec_.push_back(&this->blob_bottom_static_);
+  LSTMLayer<Dtype> layer(this->layer_param_);
+  GradientChecker<Dtype> checker(1e-2, 1e-3);
+  for (int i = 0; i < this->blob_bottom_cont_.count(); ++i) {
+    this->blob_bottom_cont_.mutable_cpu_data()[i] = i > 2;
+  }
+  checker.CheckGradientExhaustive(&layer, this->blob_bottom_vec_,
+      this->blob_top_vec_, 0);
+  checker.CheckGradientExhaustive(&layer, this->blob_bottom_vec_,
+      this->blob_top_vec_, 2);
+}
+
 
 }  // namespace caffe

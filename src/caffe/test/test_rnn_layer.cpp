@@ -6,7 +6,7 @@
 #include "caffe/blob.hpp"
 #include "caffe/common.hpp"
 #include "caffe/filler.hpp"
-#include "caffe/sequence_layers.hpp"
+#include "caffe/layers/rnn_layer.hpp"
 
 #include "caffe/test/test_caffe_main.hpp"
 #include "caffe/test/test_gradient_check_util.hpp"
@@ -20,7 +20,7 @@ class RNNLayerTest : public MultiDeviceTest<TypeParam> {
  protected:
   RNNLayerTest() : num_output_(7) {
     blob_bottom_vec_.push_back(&blob_bottom_);
-    blob_bottom_vec_.push_back(&blob_bottom_flush_);
+    blob_bottom_vec_.push_back(&blob_bottom_cont_);
     blob_top_vec_.push_back(&blob_top_);
 
     ReshapeBlobs(1, 3);
@@ -40,10 +40,11 @@ class RNNLayerTest : public MultiDeviceTest<TypeParam> {
 
   void ReshapeBlobs(int num_timesteps, int num_instances) {
     blob_bottom_.Reshape(num_timesteps, num_instances, 3, 2);
+    blob_bottom_static_.Reshape(num_instances, 2, 3, 4);
     vector<int> shape(2);
     shape[0] = num_timesteps;
     shape[1] = num_instances;
-    blob_bottom_flush_.Reshape(shape);
+    blob_bottom_cont_.Reshape(shape);
 
     FillerParameter filler_param;
     filler_param.set_min(-1);
@@ -55,7 +56,8 @@ class RNNLayerTest : public MultiDeviceTest<TypeParam> {
   int num_output_;
   LayerParameter layer_param_;
   Blob<Dtype> blob_bottom_;
-  Blob<Dtype> blob_bottom_flush_;
+  Blob<Dtype> blob_bottom_cont_;
+  Blob<Dtype> blob_bottom_static_;
   Blob<Dtype> blob_top_;
   vector<Blob<Dtype>*> blob_bottom_vec_;
   vector<Blob<Dtype>*> blob_top_vec_;
@@ -79,12 +81,12 @@ TYPED_TEST(RNNLayerTest, TestForward) {
   const int num = this->blob_bottom_.shape(1);
   this->ReshapeBlobs(kNumTimesteps, num);
 
-  // Fill the flush blob with <0, 1, 1, ..., 1>,
+  // Fill the cont blob with <0, 1, 1, ..., 1>,
   // indicating a sequence that begins at the first timestep
   // then continues for the rest of the sequence.
   for (int t = 0; t < kNumTimesteps; ++t) {
     for (int n = 0; n < num; ++n) {
-      this->blob_bottom_flush_.mutable_cpu_data()[t * num + n] = t > 0;
+      this->blob_bottom_cont_.mutable_cpu_data()[t * num + n] = t > 0;
     }
   }
 
@@ -119,7 +121,7 @@ TYPED_TEST(RNNLayerTest, TestForward) {
     caffe_copy(bottom_count, bottom_copy.cpu_data() + t * bottom_count,
                this->blob_bottom_.mutable_cpu_data());
     for (int n = 0; n < num; ++n) {
-      this->blob_bottom_flush_.mutable_cpu_data()[n] = t > 0;
+      this->blob_bottom_cont_.mutable_cpu_data()[n] = t > 0;
     }
     LOG(INFO) << "Calling forward for RNN timestep " << t;
     layer->Forward(this->blob_bottom_vec_, this->blob_top_vec_);
@@ -131,7 +133,7 @@ TYPED_TEST(RNNLayerTest, TestForward) {
     }
   }
 
-  // Process the batch one timestep at a time with all flush blobs set to 0.
+  // Process the batch one timestep at a time with all cont blobs set to 0.
   // Check that we get a different result, except in the first timestep.
   Caffe::set_random_seed(1701);
   layer.reset(new RNNLayer<Dtype>(this->layer_param_));
@@ -140,7 +142,7 @@ TYPED_TEST(RNNLayerTest, TestForward) {
     caffe_copy(bottom_count, bottom_copy.cpu_data() + t * bottom_count,
                this->blob_bottom_.mutable_cpu_data());
     for (int n = 0; n < num; ++n) {
-      this->blob_bottom_flush_.mutable_cpu_data()[n] = 0;
+      this->blob_bottom_cont_.mutable_cpu_data()[n] = 0;
     }
     LOG(INFO) << "Calling forward for RNN timestep " << t;
     layer->Forward(this->blob_bottom_vec_, this->blob_top_vec_);
@@ -166,18 +168,18 @@ TYPED_TEST(RNNLayerTest, TestGradient) {
       this->blob_top_vec_, 0);
 }
 
-TYPED_TEST(RNNLayerTest, TestGradientNonZeroFlush) {
+TYPED_TEST(RNNLayerTest, TestGradientNonZeroCont) {
   typedef typename TypeParam::Dtype Dtype;
   RNNLayer<Dtype> layer(this->layer_param_);
   GradientChecker<Dtype> checker(1e-2, 1e-3);
-  for (int i = 0; i < this->blob_bottom_flush_.count(); ++i) {
-    this->blob_bottom_flush_.mutable_cpu_data()[i] = i > 2;
+  for (int i = 0; i < this->blob_bottom_cont_.count(); ++i) {
+    this->blob_bottom_cont_.mutable_cpu_data()[i] = i > 2;
   }
   checker.CheckGradientExhaustive(&layer, this->blob_bottom_vec_,
       this->blob_top_vec_, 0);
 }
 
-TYPED_TEST(RNNLayerTest, TestGradientNonZeroFlushBufferSize2) {
+TYPED_TEST(RNNLayerTest, TestGradientNonZeroContBufferSize2) {
   typedef typename TypeParam::Dtype Dtype;
   this->ReshapeBlobs(2, 2);
   // fill the values
@@ -186,11 +188,30 @@ TYPED_TEST(RNNLayerTest, TestGradientNonZeroFlushBufferSize2) {
   filler.Fill(&this->blob_bottom_);
   RNNLayer<Dtype> layer(this->layer_param_);
   GradientChecker<Dtype> checker(1e-2, 1e-3);
-  for (int i = 0; i < this->blob_bottom_flush_.count(); ++i) {
-    this->blob_bottom_flush_.mutable_cpu_data()[i] = i > 2;
+  for (int i = 0; i < this->blob_bottom_cont_.count(); ++i) {
+    this->blob_bottom_cont_.mutable_cpu_data()[i] = i > 2;
   }
   checker.CheckGradientExhaustive(&layer, this->blob_bottom_vec_,
       this->blob_top_vec_, 0);
+}
+
+TYPED_TEST(RNNLayerTest, TestGradientNonZeroContBufferSize2WithStaticInput) {
+  typedef typename TypeParam::Dtype Dtype;
+  this->ReshapeBlobs(2, 2);
+  FillerParameter filler_param;
+  UniformFiller<Dtype> filler(filler_param);
+  filler.Fill(&this->blob_bottom_);
+  filler.Fill(&this->blob_bottom_static_);
+  this->blob_bottom_vec_.push_back(&this->blob_bottom_static_);
+  RNNLayer<Dtype> layer(this->layer_param_);
+  GradientChecker<Dtype> checker(1e-2, 1e-3);
+  for (int i = 0; i < this->blob_bottom_cont_.count(); ++i) {
+    this->blob_bottom_cont_.mutable_cpu_data()[i] = i > 2;
+  }
+  checker.CheckGradientExhaustive(&layer, this->blob_bottom_vec_,
+      this->blob_top_vec_, 0);
+  checker.CheckGradientExhaustive(&layer, this->blob_bottom_vec_,
+      this->blob_top_vec_, 2);
 }
 
 }  // namespace caffe

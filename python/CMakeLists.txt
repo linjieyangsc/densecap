@@ -1,5 +1,5 @@
 if(NOT HAVE_PYTHON)
-  message(STATUS "Python interface is disabled or not all required dependecies found. Building without it...")
+  message(STATUS "Python interface is disabled or not all required dependencies found. Building without it...")
   return()
 endif()
 
@@ -22,13 +22,19 @@ if(UNIX OR APPLE)
 endif()
 
 # ---[ Install
-file(GLOB files1 *.py requirements.txt)
-install(FILES ${files1} DESTINATION python)
+# scripts
+file(GLOB python_files *.py requirements.txt)
+install(FILES ${python_files} DESTINATION python)
 
-file(GLOB files2 caffe/*.py)
-install(FILES  ${files2} DESTINATION python/caffe)
+# module
+install(DIRECTORY caffe
+    DESTINATION python
+    FILES_MATCHING
+    PATTERN "*.py"
+    PATTERN "ilsvrc_2012_mean.npy"
+    PATTERN "test" EXCLUDE
+    )
+
+# _caffe.so
 install(TARGETS pycaffe  DESTINATION python/caffe)
-install(DIRECTORY caffe/imagenet caffe/proto caffe/test DESTINATION python/caffe)
-
-
 

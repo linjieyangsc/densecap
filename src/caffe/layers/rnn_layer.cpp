@@ -5,7 +5,7 @@
 #include "caffe/common.hpp"
 #include "caffe/filler.hpp"
 #include "caffe/layer.hpp"
-#include "caffe/sequence_layers.hpp"
+#include "caffe/layers/rnn_layer.hpp"
 #include "caffe/util/math_functions.hpp"
 
 namespace caffe {
@@ -19,7 +19,7 @@ void RNNLayer<Dtype>::RecurrentInputBlobNames(vector<string>* names) const {
 template <typename Dtype>
 void RNNLayer<Dtype>::RecurrentOutputBlobNames(vector<string>* names) const {
   names->resize(1);
-  (*names)[0] = "h_" + this->int_to_str(this->T_);
+  (*names)[0] = "h_" + format_int(this->T_);
 }
 
 template <typename Dtype>
@@ -70,9 +70,9 @@ void RNNLayer<Dtype>::FillUnrolledNet(NetParameter* net_param) const {
   LayerParameter tanh_param;
   tanh_param.set_type("TanH");
 
-  LayerParameter scalar_param;
-  scalar_param.set_type("Scalar");
-  scalar_param.mutable_scalar_param()->set_axis(0);
+  LayerParameter scale_param;
+  scale_param.set_type("Scale");
+  scale_param.mutable_scale_param()->set_axis(0);
 
   LayerParameter slice_param;
   slice_param.set_type("Slice");
@@ -81,8 +81,12 @@ void RNNLayer<Dtype>::FillUnrolledNet(NetParameter* net_param) const {
   vector<BlobShape> input_shapes;
   RecurrentInputShapes(&input_shapes);
   CHECK_EQ(1, input_shapes.size());
-  net_param->add_input("h_0");
-  net_param->add_input_shape()->CopyFrom(input_shapes[0]);
+
+  LayerParameter* input_layer_param = net_param->add_layer();
+  input_layer_param->set_type("Input");
+  InputParameter* input_param = input_layer_param->mutable_input_param();
+  input_layer_param->add_top("h_0");
+  input_param->add_shape()->CopyFrom(input_shapes[0]);
 
   LayerParameter* cont_slice_param = net_param->add_layer();
   cont_slice_param->CopyFrom(slice_param);
@@ -100,6 +104,7 @@ void RNNLayer<Dtype>::FillUnrolledNet(NetParameter* net_param) const {
     x_transform_param->add_param()->set_name("b_h");
     x_transform_param->add_bottom("x");
     x_transform_param->add_top("W_xh_x");
+    x_transform_param->add_propagate_down(true);
   }
 
   if (this->static_input_) {
@@ -111,18 +116,19 @@ void RNNLayer<Dtype>::FillUnrolledNet(NetParameter* net_param) const {
     x_static_transform_param->set_name("W_xh_x_static");
     x_static_transform_param->add_param()->set_name("W_xh_static");
     x_static_transform_param->add_bottom("x_static");
-    x_static_transform_param->add_top("W_xh_x_static");
-
+    x_static_transform_param->add_top("W_xh_x_static_preshape");
+    x_static_transform_param->add_propagate_down(true);
     LayerParameter* reshape_param = net_param->add_layer();
     reshape_param->set_type("Reshape");
     BlobShape* new_shape =
          reshape_param->mutable_reshape_param()->mutable_shape();
     new_shape->add_dim(1);  // One timestep.
-    new_shape->add_dim(this->N_);
+    // Should infer this->N as the dimension so we can reshape on batch size.
+    new_shape->add_dim(-1);
     new_shape->add_dim(
         x_static_transform_param->inner_product_param().num_output());
     reshape_param->set_name("W_xh_x_static_reshape");
-    reshape_param->add_bottom("W_xh_x_static");
+    reshape_param->add_bottom("W_xh_x_static_preshape");
     reshape_param->add_top("W_xh_x_static");
   }
 
@@ -138,8 +144,8 @@ void RNNLayer<Dtype>::FillUnrolledNet(NetParameter* net_param) const {
   output_concat_layer.mutable_concat_param()->set_axis(0);
 
   for (int t = 1; t <= this->T_; ++t) {
-    string tm1s = this->int_to_str(t - 1);
-    string ts = this->int_to_str(t);
+    string tm1s = format_int(t - 1);
+    string ts = format_int(t);
 
     cont_slice_param->add_top("cont_" + ts);
     x_slice_param->add_top("W_xh_x_" + ts);
@@ -153,7 +159,7 @@ void RNNLayer<Dtype>::FillUnrolledNet(NetParameter* net_param) const {
     //                       0   otherwise
     {
       LayerParameter* cont_h_param = net_param->add_layer();
-      cont_h_param->CopyFrom(scalar_param);
+      cont_h_param->CopyFrom(scale_param);
       cont_h_param->set_name("h_conted_" + tm1s);
       cont_h_param->add_bottom("h_" + tm1s);
       cont_h_param->add_bottom("cont_" + ts);
