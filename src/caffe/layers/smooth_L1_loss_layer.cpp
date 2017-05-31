@@ -5,7 +5,7 @@
 // Written by Ross Girshick
 // ------------------------------------------------------------------
 
-#include "caffe/loss_layers.hpp"
+#include "caffe/layers/smooth_L1_loss_layer.hpp"
 
 namespace caffe {
 

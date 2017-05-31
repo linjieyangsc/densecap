@@ -5,8 +5,8 @@
 // Written by Ross Girshick
 // ------------------------------------------------------------------
 
-#ifndef CAFFE_FAST_RCNN_LAYERS_HPP_
-#define CAFFE_FAST_RCNN_LAYERS_HPP_
+#ifndef CAFFE_ROI_POOLING_LAYER_HPP_
+#define CAFFE_ROI_POOLING_LAYER_HPP_
 
 #include <vector>
 
@@ -14,8 +14,6 @@
 #include "caffe/common.hpp"
 #include "caffe/layer.hpp"
 #include "caffe/proto/caffe.pb.h"
-
-#include "caffe/loss_layers.hpp"
 
 namespace caffe {
 
@@ -60,4 +58,4 @@ class ROIPoolingLayer : public Layer<Dtype> {
 
 }  // namespace caffe
 
-#endif  // CAFFE_FAST_RCNN_LAYERS_HPP_
+#endif  // CAFFE_ROI_POOLING_LAYER_HPP_

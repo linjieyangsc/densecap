@@ -3,7 +3,7 @@
 #include "caffe/layer.hpp"
 #include "caffe/util/io.hpp"
 #include "caffe/util/math_functions.hpp"
-#include "caffe/vision_layers.hpp"
+#include "caffe/layers/weighted_euclidean_loss_layer.hpp"
 
 namespace caffe {
 

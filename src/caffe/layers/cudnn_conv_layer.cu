@@ -35,7 +35,6 @@ void CuDNNConvolutionLayer<Dtype>::Forward_gpu(
               bias_desc_, bias_data + bias_offset_ * g,
               cudnn::dataType<Dtype>::one,
               top_descs_[i], top_data + top_offset_ * g));
-#endif
 
       }
     }
