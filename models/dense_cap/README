@@ -1,15 +1,8 @@
-===========================================
-Linjie Yang
-04/20/2016
-===========================================
-This directory holds scripts for the baseline dense captioning models.
-The main files and their usages are as follows.
-  Preprocessing:
-    (1) vg_to_hdf5_data.py: process visual genome data to hdf5 data. One sample is one image + one phrase + one region. It also produces data for faster-rcnn-lstm (See "models/faster_rcnn_cap" for details).
-  Basic model without information flow:
-    (2) dense_cap2.vgg.prototxt, dense_cap2_solver.vgg.prototxt, train_dense_cap2.vgg.sh: network structure, solver, and command file for the model. 
-  Model with information flow:
-    (3) dense_cap_cross(n).vgg.prototxt, dense_cap_cross(n)_solver.vgg.prototxt, train_dense_cap_cross(n).vgg.sh: different n is for different network structures.
-  Model evaluation:
-    (4) run_experiment_vgg_vg.py: test models using the visual genome test set. Save results for later visualization. Caculate Meteor score and mean AP. Note that it uses two separate prototxt files for network description: IMAGE_NET_FILE and LSTM_NET_FILE. You need to modify the two files to make them consistent with the saved model.
-    (5) region_captioner.py: functions to generate a lot of region caption pairs for one image. Using either beam search or sampling. Used by (4)
+## Description ##
+
+This folder holds scripts for training and evaluating the dense captioning models described in the CVPR 2017 paper:
+ "Dense captioning with joint inference and visual context", Linjie Y. etc. 
+
+Note that the training/testing framework of this kind of model is different from the other models. It generally follows the faster-rcnn framework, which utilizes the Python Wrapper of Caffe to take care of each step in the training and testing: reading data, organizing mini-batches, snapshotting, logging, evaluating. It utilizes a lot of python layers which are located in "lib" folder.
+
+The main files and the descriptions are as follows.
