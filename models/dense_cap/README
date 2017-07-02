@@ -1,8 +1,0 @@
-## Description ##
-
-This folder holds scripts for training and evaluating the dense captioning models described in the CVPR 2017 paper:
- "Dense captioning with joint inference and visual context", Linjie Y. etc. 
-
-Note that the training/testing framework of this kind of model is different from the other models. It generally follows the faster-rcnn framework, which utilizes the Python Wrapper of Caffe to take care of each step in the training and testing: reading data, organizing mini-batches, snapshotting, logging, evaluating. It utilizes a lot of python layers which are located in "lib" folder.
-
-The main files and the descriptions are as follows.
