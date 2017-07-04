@@ -141,10 +141,8 @@ def _greedy_search(embed_net, recurrent_net, forward_args, optional_args, propos
      #   recurrent_net.forward(**forward_args)
      #   forward_args['cont_sentence'][:] = 1
      #   forward_args['input_features'] = region_features
-    if 'global_features' in optional_args and 'fusion_features' in recurrent_net.blobs:
-        # need to manually set the fusion operation here
-        forward_args['fusion_features'] = forward_args['input_features'] * optional_args['global_features'].reshape(*(forward_args['input_features'].shape))
-    elif 'global_features' in optional_args:
+   
+    if 'global_features' in optional_args:
         forward_args['global_features'] = optional_args['global_features'].reshape(*(forward_args['input_features'].shape))
     # reshape blobs
     for k, v in forward_args.iteritems():
@@ -240,7 +238,7 @@ def im_detect(feature_net, embed_net, recurrent_net, im, boxes=None, use_box_at 
     feat_args = {'input_features': region_features}
     opt_args = {}
     # global feature as an optional input: context
-    if 'global_features' in feature_net.blobs:
+    if 'global_features' in feature_net.blobs and 'global_features' in recurrent_net.blobs:
         #changed according to the global feature shape
         opt_args['global_features'] = np.tile(feature_net.blobs['global_features'].data, (1,proposal_n,1)) 
     
