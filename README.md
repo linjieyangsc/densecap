@@ -15,9 +15,9 @@ Our code is adapted from the popular [Faster-RCNN repo](https://github.com/rbgir
 
 ## Compiling ##
 
-###Compile Caffe###
-Please following [official guide](http://caffe.berkeleyvision.org/). Support CUDA 7.5+, CUDNN 5.0+.
-###Compile local libraries###
+### Compile Caffe ###
+Please follow [official guide](http://caffe.berkeleyvision.org/). Support CUDA 7.5+, CUDNN 5.0+.
+### Compile local libraries ###
 ```
 cd lib
 make
@@ -30,12 +30,12 @@ python [MODEL_PATH] [IMAGE_PATH] [GPU_ID]
 ```
 
 ## Training ##
-### Data preparation###
+### Data preparation ###
 For model training you will need to download the visual genome dataset from [Visual Genome Website](http://visualgenome.org/api/v0/api_home.html), either 1.0 or 1.2 is fine.
 Download pre-trained VGG16 model from [link](http://www.robots.ox.ac.uk/~vgg/software/very_deep/caffe/VGG_ILSVRC_16_layers.caffemodel).
 Modify data paths in `models/dense_cap/preprocess.py` and run it from the library root to generate training/validation/testing data.
 
-### Start training###
+### Start training ###
 Run `models/dense_cap/dense_cap_train.sh` to start training. For example, to train a model with joint inference and visual context (late fusion, feature summation) on visual genome 1.0:
 ```
 ./models/dense_cap/dense_cap_train.sh [GPU_ID] visual_genome late_fusion_sum [VGG_MODEL_PATH] 
