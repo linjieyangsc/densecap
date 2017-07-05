@@ -819,7 +819,7 @@ layer {
   python_param {
     module: 'rpn.sentence_data_layer'
     layer: 'SentenceDataLayer'
-    param_str: "{'time_steps': 13, 'phrase_path': 'models/dense_cap/h5_data_distill/buffer_100/train_gt_phrases.pkl','mode':'concat'}" 
+    param_str: "{'time_steps': 13, 'phrase_path': 'data/visual_genome/1.0/train_gt_phrases.pkl','mode':'concat'}" 
   }
 }
 layer {

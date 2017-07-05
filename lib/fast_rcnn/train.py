@@ -16,8 +16,9 @@ import numpy as np
 import os
 
 from caffe.proto import caffe_pb2
+import google.protobuf.text_format
 import google.protobuf as pb2
-DEBUG=False
+
 
 class SolverWrapper(object):
     """A simple wrapper around Caffe's solver.
@@ -41,8 +42,10 @@ class SolverWrapper(object):
             self.bbox_means, self.bbox_stds = \
                     rdl_roidb.add_bbox_regression_targets(roidb)
             print 'done'
-
-        self.solver = caffe.SGDSolver(solver_prototxt)
+	#test solverloader
+	print solver_prototxt
+	ss = caffe.SGDSolver(solver_prototxt)
+        self.solver = ss #caffe.SGDSolver(solver_prototxt)
         if pretrained_model is not None:
             print ('Loading pretrained model '
                    'weights from {:s}').format(pretrained_model)
@@ -104,34 +107,6 @@ class SolverWrapper(object):
             timer.tic()
             self.solver.step(1)
             timer.toc()
-            if DEBUG:
-                
-                
-                #print self.solver.net.blobs['conv3_3'].diff
-                print self.solver.net.params['conv3_3'][0].data
-                # fc7_diff =self.solver.net.blobs['fc7_reshape'].diff
-                # print 'fc7 diff samples'
-                # print fc7_diff[0,0,:]
-                # print fc7_diff[0,-1,:]
-                # bbox_pred =self.solver.net.blobs['bbox_pred'].data
-                # bbox_pred_d =self.solver.net.blobs['bbox_pred'].diff
-                # print 'bbox pred samples'
-                # print bbox_pred[:,0,:]
-                # print bbox_pred[:,-1,:]
-                # print 'bbox pred diff samples'
-                # print bbox_pred_d[:,0,:]
-                # print bbox_pred_d[:,-1,:]
-
-               
-
-                # bbox_target =self.solver.net.blobs['bbox_targets'].data
-                # print 'bbox target samples'
-                # print bbox_target[0,:]
-                # print bbox_target[-1,:]
-                # bbox_weights = self.solver.net.blobs['bbox_inside_weights'].data
-                # print 'bbox inside weights'
-                # print bbox_weights[0,:]
-                # print bbox_weights[-1,:]
               
             if self.solver.iter % (10 * self.solver_param.display) == 0:
                 print 'speed: {:.3f}s / iter'.format(timer.average_time)

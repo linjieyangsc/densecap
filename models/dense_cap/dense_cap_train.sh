@@ -1,3 +1,4 @@
+# Script for training dense captioning model with joint inference and visual context
 # Do freeze-convnet training first, then finetuning
 # Usage:
 # ./models/dense_cap/dense_cap_train.sh [GPU_ID] [DATASET] [MODEL_TYPE] [INITIAL_WEIGHTS] [EXTRA_ARGS]
@@ -37,22 +38,34 @@ case $DATASET in
     exit
     ;;
 esac
-# Training
 GLOG_logtostderr=1
+# If training visual context model, need to start with the context-free counterpart
+if [ ${MODEL_TYPE} != "joint_inference" ]
+then
+./lib/tools/train_net.py --gpu ${GPU_ID} \
+  --solver models/${PT_DIR}/solver_joint_inference.prototxt \
+  --weights ${WEIGHTS} \
+  --imdb ${TRAIN_IMDB} \
+  --iters ${FINETUNE_AFTER} \
+  --cfg models/${PT_DIR}/dense_cap.yml \
+  ${EXTRA_ARGS}
+WEIGHTS=output/dense_cap/${TRAIN_IMDB}/dense_cap_joint_inference_iter_${FINETUNE_AFTER}.caffemodel
+fi
+# Training with convnet weights fixed
 ./lib/tools/train_net.py --gpu ${GPU_ID} \
   --solver models/${PT_DIR}/solver_${MODEL_TYPE}.prototxt \
   --weights ${WEIGHTS} \
   --imdb ${TRAIN_IMDB} \
   --iters ${FINETUNE_AFTER} \
-  --cfg models/${PT_DIR}/faster_rcnn_end2end.yml \
+  --cfg models/${PT_DIR}/dense_cap.yml \
   ${EXTRA_ARGS}
-NEW_WEIGHTS=output/faster_rcnn_end2end/${TRAIN_IMDB}/faster_rcnn_cap_${MODEL_TYPE}_iter_${FINETUNE_AFTER}.caffemodel
-# Finetuning
+NEW_WEIGHTS=output/dense_cap/${TRAIN_IMDB}/dense_cap_${MODEL_TYPE}_iter_${FINETUNE_AFTER}.caffemodel
+# Finetuning all weights
 ./lib/tools/train_net.py --gpu ${GPU_ID} \
   --solver models/${PT_DIR}/solver_${MODEL_TYPE}_finetune.prototxt \
   --weights ${NEW_WEIGHTS} \
   --imdb ${TRAIN_IMDB} \
   --iters `expr ${ITERS} - ${FINETUNE_AFTER}` \
-  --cfg models/${PT_DIR}/faster_rcnn_end2end.yml \
+  --cfg models/${PT_DIR}/dense_cap.yml \
   ${EXTRA_ARGS}
 

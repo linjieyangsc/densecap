@@ -21,7 +21,7 @@ class ProposalTargetLayer(caffe.Layer):
     """
 
     def setup(self, bottom, top):
-        layer_params = yaml.load(self.param_str_)
+        layer_params = yaml.load(self.param_str)
 
         # sampled rois (0, x1, y1, x2, y2)
         top[0].reshape(cfg.TRAIN.BATCH_SIZE, 5)

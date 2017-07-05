@@ -13,7 +13,7 @@ class DebugBBoxRegLayer(caffe.Layer):
         """Setup the DebugBBoxRegLayer."""
 
         # parse the layer parameter string, which must be valid YAML
-        layer_params = yaml.load(self.param_str_)
+        layer_params = yaml.load(self.param_str)
 
         self._time_steps = layer_params['time_steps']
         assert(bottom[0].data.shape[0] == self._time_steps)

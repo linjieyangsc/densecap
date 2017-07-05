@@ -7,6 +7,8 @@ display: 20
 average_loss: 100
 momentum: 0.98
 weight_decay: 0.000
+# Use different stages for different fusion methods: 
+# 'sum' for summation, 'mult' for multiplication, 'concat' for concatenation
 train_state: {stage: 'freeze-convnet' stage: 'sum'}
 # We disable standard caffe solver snapshotting and implement our own snapshot
 # function

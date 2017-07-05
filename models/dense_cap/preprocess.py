@@ -11,12 +11,12 @@ import time
 import numpy as np
 from collections import Counter 
 VG_VERSION='1.0'
-VG_PATH = '/home/ljyang/work/data/visual_genome'
+VG_PATH = '/media/researchshare/linjieyang/data/visual-genome'
 VG_IMAGE_ROOT = '%s/images' % VG_PATH
 VG_REGION_PATH = '%s/%s/region_descriptions.json' % (VG_PATH,VG_VERSION)
 VG_METADATA_PATH = '%s/%s/image_data.json' % (VG_PATH,VG_VERSION)
 vocabulary_size = 10000#10497#from dense caption paper
-HAS_VOCAB=True
+HAS_VOCAB=False
 OUTPUT_DIR = 'data/visual_genome/%s' % VG_VERSION
 
 # UNK_IDENTIFIER is the word used to identify unknown words
@@ -144,8 +144,7 @@ def process_vg():
 		with open(vocab_path,'r') as f:
 			vocab = [line.strip() for line in f]
 
-	datasets = ['test_subset']
-	#datasets = ['test_subset']		
+	datasets = ['train','val','test']
 	for split_name in datasets:
 		vocab = process_dataset(split_name, vocab=vocab)
 

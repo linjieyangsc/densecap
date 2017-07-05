@@ -1,5 +1,8 @@
 #!/usr/bin/env python
 
+# -------------------------------------------------------- 
+# Train a dense captioning model
+# Code adapted from faster R-CNN project
 # --------------------------------------------------------
 # Fast R-CNN
 # Copyright (c) 2015 Microsoft

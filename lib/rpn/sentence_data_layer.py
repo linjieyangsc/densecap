@@ -19,8 +19,8 @@ class SentenceDataLayer(caffe.Layer):
         """Setup the SentenceDataLayer."""
 
         # parse the layer parameter string, which must be valid YAML
-        layer_params = yaml.load(self.param_str_)
-        all_modes = ('repeat','concat','concat2')
+        layer_params = yaml.load(self.param_str)
+        all_modes = ('repeat','concat')
         self._time_steps = layer_params['time_steps']
         phrase_path = '%s/%s_gt_phrases.pkl' % (cfg.CACHE_DIR, str(self.phase).lower())
         self._mode = layer_params['mode'] if 'mode' in layer_params else 'repeat'
@@ -40,8 +40,6 @@ class SentenceDataLayer(caffe.Layer):
             top[i].reshape(self._time_steps, num_regions)
             if self._mode == 'concat':
                 top[0].reshape(self._time_steps-1, num_regions)
-            elif self._mode == 'concat2':
-                top[0].reshape(self._time_steps-2, num_regions)
         
 
 
@@ -54,8 +52,6 @@ class SentenceDataLayer(caffe.Layer):
             top[0].reshape(self._time_steps,num_regions)
         elif self._mode == 'concat':
             top[0].reshape(self._time_steps-1,num_regions)
-        else:
-            top[0].reshape(self._time_steps-2,num_regions)
         top[1].reshape(self._time_steps,num_regions)
         top[2].reshape(self._time_steps,num_regions)
         if (len(top) > 3):

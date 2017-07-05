@@ -16,7 +16,7 @@ class GlobalRoILayer(caffe.Layer):
     """
 
     def setup(self, bottom, top):
-        layer_params = yaml.load(self.param_str_)
+        layer_params = yaml.load(self.param_str)
         #only one roi (global roi)
         top[0].reshape(1, 5)
         

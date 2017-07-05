@@ -6,7 +6,7 @@ input_shape {
   dim: 1
   dim: 512
 }
-input "global_features"
+input: "global_features"
 input_shape {
   dim: 1
   dim: 1

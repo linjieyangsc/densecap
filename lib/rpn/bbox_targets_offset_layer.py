@@ -19,7 +19,7 @@ class BBoxTargetsOffsetLayer(caffe.Layer):
     """
 
     def setup(self, bottom, top):
-        layer_params = yaml.load(self.param_str_)
+        layer_params = yaml.load(self.param_str)
         num_rois_offset = bottom[0].data.shape[0]
         num_rois = bottom[1].data.shape[0]
         assert(num_rois_offset % num_rois == 0) # times of num_rois

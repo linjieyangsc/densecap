@@ -18,7 +18,7 @@ class RoisOffsetLayer(caffe.Layer):
     """
 
     def setup(self, bottom, top):
-        layer_params = yaml.load(self.param_str_)
+        layer_params = yaml.load(self.param_str)
         self._time_steps = bottom[0].data.shape[0]
         assert(bottom[0].data.shape[1] == bottom[1].data.shape[0])
         # sampled rois (0, x1, y1, x2, y2)
