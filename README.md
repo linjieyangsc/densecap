@@ -1,5 +1,5 @@
-## Dense Image Captioning with Caffe ##
-This repo is the released code of dense image captioning model described in the CVPR 2017 paper:
+## Dense Captioning with Joint Inference and Visual Context ##
+This repo is the released code of dense image captioning models described in the CVPR 2017 paper:
 ```
  @InProceedings{CVPR17,
   author       = "Linjie Yang and Kevin Tang and Jianchao Yang and Li-Jia Li",
@@ -10,25 +10,25 @@ This repo is the released code of dense image captioning model described in the 
 }
 ```
 All code is provided for research purposes only and without any warranty. Any commercial use requires our consent. When using the code in your research work, please cite the above paper.
-Our code is adapted from the popular [Faster-RCNN repo](https://github.com/rbgirshick/py-faster-rcnn) written by Ross Girshick.
+Our code is adapted from the popular [Faster-RCNN repo](https://github.com/rbgirshick/py-faster-rcnn) written by Ross Girshick. The evaluation code is adapted from [COCO captioning evaluation code](https://github.com/tylin/coco-caption).
 
 
 ## Compiling ##
 
 ### Compile Caffe ###
-Please follow [official guide](http://caffe.berkeleyvision.org/). Support CUDA 7.5+, CUDNN 5.0+.
+Please follow [official guide](http://caffe.berkeleyvision.org/). Support CUDA 7.5+, CUDNN 5.0+. Tested on Ubuntu 14.04.
 ### Compile local libraries ###
 ```
 cd lib
 make
 ```
-## Running ##
-Download official model using scripts `download_models.sh` in `models/dense_cap`.
-Test model with python:
+## Demo ##
+Download official sample model using script `download_model.sh` in `models/dense_cap`.
+Test model with an input image:
 ```
-python [MODEL_PATH] [IMAGE_PATH] [GPU_ID]
+python ./lib/tools/demo.py --image [IMAGE_PATH] --gpu [GPU_ID]
 ```
-
+It will generate a folder named "demo" in the library root. Inside the "demo" folder, there will be an HTML page showing the predicted results.
 ## Training ##
 ### Data preparation ###
 For model training you will need to download the visual genome dataset from [Visual Genome Website](http://visualgenome.org/api/v0/api_home.html), either 1.0 or 1.2 is fine.
@@ -41,7 +41,7 @@ Run `models/dense_cap/dense_cap_train.sh` to start training. For example, to tra
 ./models/dense_cap/dense_cap_train.sh [GPU_ID] visual_genome late_fusion_sum [VGG_MODEL_PATH] 
 ```
 It typicals takes 2 days to finish training.
-### Evaluation ###
+## Evaluation ##
 Modify `models/dense_cap/dense_cap_test.sh` according to the model you want to test. For example, if you want to test the late-fusion context model with summation, it will look like this:
 ```
 GPU_ID=3
@@ -56,4 +56,5 @@ time ./lib/tools/test_net.py --gpu ${GPU_ID} \
   --imdb ${TEST_IMDB} \
   --cfg models/${PT_DIR}/dense_cap.yml \
 ```
-Except the model path(`NET_FINAL`), the only thing you should change is `def_recurrent`, which should be `models/${PT_DIR}/test_cap_pred_no_context.prototxt` for models without context information and `models/${PT_DIR}/test_cap_pred_context.prototxt` for models with context information. 
+Except the model path(`NET_FINAL`), the only thing you should change is `def_recurrent`, which should be `models/${PT_DIR}/test_cap_pred_no_context.prototxt` for models without context information and `models/${PT_DIR}/test_cap_pred_context.prototxt` for models with context information.
+To visualize the result, you can add `--vis` to the end of the above script. It will generate html pages for each image visualizing the results under folder `vis`.

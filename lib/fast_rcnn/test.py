@@ -126,25 +126,9 @@ def _greedy_search(embed_net, recurrent_net, forward_args, optional_args, propos
     pred_captions = [None] * proposal_n
     pred_logprobs = [0.0] * proposal_n
     pred_bbox_offsets = np.zeros((proposal_n, 4))
-    #pred_bbox_offsets_all = [None] *proposal_n
 
     
     forward_args['cont_sentence'] = np.zeros((1,proposal_n))
-    # LEGACY: optional global feature as first input
-    #if 'global_features' in optional_args and not 'global_features' in recurrent_net.blobs:
-        
-     #   region_features = forward_args['input_features'].copy()
-     #   forward_args['input_features'] = optional_args['global_features'].reshape(*(forward_args['input_features'].shape))
-        
-        # reshape blobs
-    #    for k, v in forward_args.iteritems():
-    #        if DEBUG:
-     #           print 'shape of %s is ' % k
-     #           print v.shape
-     #       recurrent_net.blobs[k].reshape(*(v.shape))
-     #   recurrent_net.forward(**forward_args)
-     #   forward_args['cont_sentence'][:] = 1
-     #   forward_args['input_features'] = region_features
    
     if 'global_features' in optional_args:
         forward_args['global_features'] = optional_args['global_features'].reshape(*(forward_args['input_features'].shape))
@@ -216,9 +200,8 @@ def im_detect(feature_net, embed_net, recurrent_net, im, boxes=None, use_box_at 
     """
 
     # for bbox unnormalization
-    # TODO: put it in a more organized way
-    bbox_mean = np.array([0,0,0,0]).reshape((1,4))
-    bbox_stds = np.array([0.1, 0.1, 0.2, 0.2]).reshape((1,4))
+    bbox_mean = np.array(cfg.TRAIN.BBOX_NORMALIZE_MEANS).reshape((1,4))
+    bbox_stds = np.array(cfg.TRAIN.BBOX_NORMALIZE_STDS).reshape((1,4))
 
     blobs, im_scales = _get_blobs(im, boxes)
     assert len(im_scales) == 1, "Only single-image batch implemented"
@@ -262,7 +245,6 @@ def im_detect(feature_net, embed_net, recurrent_net, im, boxes=None, use_box_at 
         captions, box_offsets, logprobs = _greedy_search(embed_net, recurrent_net, feat_args, opt_args, proposal_n, \
             pred_bbox = True, use_box_at = use_box_at)
 
-    #pred_box_all = []#[None] * proposal_n
     #bbox target unnormalization
     box_deltas = box_offsets * bbox_stds + bbox_mean
 
@@ -270,14 +252,6 @@ def im_detect(feature_net, embed_net, recurrent_net, im, boxes=None, use_box_at 
     pred_boxes = bbox_transform_inv(boxes, box_deltas)
     pred_boxes = clip_boxes(pred_boxes, im.shape)
     
-    # for box_list, box in zip(box_offsets_all, boxes):
-    #     #bbox target unnormalization
-    #     box_deltas = box_list * bbox_stds + bbox_mean
-
-    #     #do the transformation
-    #     pred_box_list = bbox_transform_inv(np.tile(box, (proposal_n,1)), box_deltas)
-    #     pred_box_list = clip_boxes(pred_boxes, im.shape)
-    #     pred_box_all.append(pred_box_list)
     return scores, pred_boxes, captions
 
 def vis_detections(im_path, im, captions, dets, thresh=0.5, save_path='vis'):
@@ -288,7 +262,7 @@ def vis_detections(im_path, im, captions, dets, thresh=0.5, save_path='vis'):
                 os.makedirs(save_path+'/images')
     im_name = im_path.split('/')[-1][:-4]
     page = open(os.path.join(save_path, im_name + '.html'),'w')
-    page.write('<hr><h2>Image and the region captions</h2>')
+    page.write('<hr><h2>Dense caption results for image %s</h2>' % im_name)
     for i in xrange(dets.shape[0]):
         bbox = dets[i, :4]
         score = dets[i, -1]
@@ -296,7 +270,7 @@ def vis_detections(im_path, im, captions, dets, thresh=0.5, save_path='vis'):
         if score > thresh:
             im_new = np.copy(im)
             
-            cv2.rectangle(im_new, (bbox[0],bbox[1]), (bbox[2],bbox[3]), (255,0,0), 2)
+            cv2.rectangle(im_new, (bbox[0],bbox[1]), (bbox[2],bbox[3]), (0,0,255), 2)
             im_rel_path = 'images/%s_%d.jpg' % (im_name, i)
             cv2.imwrite('%s/%s' % (save_path, im_rel_path), im_new)
             page.write('<div style=\'border: 2px solid; width:166px; height:360px; display:inline-table\'>')
@@ -313,6 +287,19 @@ def sentence(vocab, vocab_indices):
     if sentence.endswith(suffix):
       sentence = sentence[:-len(suffix)]
     return sentence
+
+def test_im(feature_net, embed_net, recurrent_net, im_path, vocab, vis=True):
+    im =cv2.imread(im_path)
+    scores, boxes, captions = im_detect(feature_net, embed_net, recurrent_net, im, None, use_box_at = -1)
+    pos_dets = np.hstack((boxes, scores[:,np.newaxis])) \
+        .astype(np.float32, copy=False)
+    keep = nms(pos_dets, cfg.TEST.NMS)
+    pos_dets = pos_dets[keep, :]
+    pos_scores = scores[keep]
+    pos_captions = [sentence(vocab, captions[idx]) for idx in keep]
+    pos_boxes = boxes[keep,:]
+    if vis:
+        vis_detections(im_path, im, pos_captions, pos_dets, save_path = './demo')
 
 def test_net(feature_net, embed_net, recurrent_net, imdb, vis=True, use_box_at = -1):
     """Test a Fast R-CNN network on an image database."""
@@ -368,7 +355,6 @@ def test_net(feature_net, embed_net, recurrent_net, imdb, vis=True, use_box_at =
         pos_captions = [sentence(vocab, captions[idx]) for idx in keep]
         pos_boxes = boxes[keep,:]
         if vis:
-            #TODO(Linjie): display location sequence
             vis_detections(imdb.image_path_at(i), im, pos_captions, pos_dets, save_path = os.path.join(output_dir,'vis'))
         all_regions[i] = []
         #follow the format of baseline models routine
@@ -396,14 +382,10 @@ def test_net(feature_net, embed_net, recurrent_net, imdb, vis=True, use_box_at =
         json.dump(results, f)
 
     print 'Evaluating detections'
-    #imdb.evaluate_detections(all_regions, output_dir)
-   
-   
     
     #gt_regions = imdb.get_gt_regions() # is a list
     gt_regions_merged = [None] * num_images
     #transform gt_regions into the baseline model routine
-    #for i,regions in enumerate(gt_regions):
     for i, image_index in enumerate(imdb.image_index):
         new_gt_regions = []
         regions = imdb.get_gt_regions_index(image_index)
