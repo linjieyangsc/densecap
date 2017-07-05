@@ -40,7 +40,7 @@ Run `models/dense_cap/dense_cap_train.sh` to start training. For example, to tra
 ```
 ./models/dense_cap/dense_cap_train.sh [GPU_ID] visual_genome late_fusion_sum [VGG_MODEL_PATH] 
 ```
-It typicals takes 2 days to finish training.
+It typically takes 2 days to finish training.
 ## Evaluation ##
 Modify `models/dense_cap/dense_cap_test.sh` according to the model you want to test. For example, if you want to test the late-fusion context model with summation, it will look like this:
 ```
@@ -57,4 +57,7 @@ time ./lib/tools/test_net.py --gpu ${GPU_ID} \
   --cfg models/${PT_DIR}/dense_cap.yml \
 ```
 Except the model path(`NET_FINAL`), the only thing you should change is `def_recurrent`, which should be `models/${PT_DIR}/test_cap_pred_no_context.prototxt` for models without context information and `models/${PT_DIR}/test_cap_pred_context.prototxt` for models with context information.
-To visualize the result, you can add `--vis` to the end of the above script. It will generate html pages for each image visualizing the results under folder `vis`.
+To visualize the result, you can add `--vis` to the end of the above script. It will generate html pages for each image visualizing the results under folder `output/dense_cap/${TEST_IMDB}/vis`.
+
+## Contact ##
+If you have any questions regarding the repo, please send email to Linjie Yang (linjie.yang@snap.com).
