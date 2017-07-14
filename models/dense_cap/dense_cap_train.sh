@@ -23,15 +23,19 @@ case $DATASET in
     TRAIN_IMDB="vg_1.0_train"
     TEST_IMDB="vg_1.0_val"
     PT_DIR="dense_cap"
-    FINETUNE_AFTER=200000
-    ITERS=400000
+    FINETUNE_AFTER1=200000
+    FINETUNE_AFTER2=100000
+    ITERS1=400000
+    ITERS2=300000
     ;;
   visual_genome_1.2)
     TRAIN_IMDB="vg_1.2_train"
     TEST_IMDB="vg_1.2_val"
     PT_DIR="dense_cap"
-    FINETUNE_AFTER=200000
-    ITERS=400000
+    FINETUNE_AFTER1=200000
+    FINETUNE_AFTER2=100000
+    ITERS1=400000
+    ITERS2=300000
     ;;
   *)
     echo "No dataset given"
@@ -46,26 +50,53 @@ then
   --solver models/${PT_DIR}/solver_joint_inference.prototxt \
   --weights ${WEIGHTS} \
   --imdb ${TRAIN_IMDB} \
-  --iters ${FINETUNE_AFTER} \
+  --iters ${FINETUNE_AFTER1} \
   --cfg models/${PT_DIR}/dense_cap.yml \
   ${EXTRA_ARGS}
-WEIGHTS=output/dense_cap/${TRAIN_IMDB}/dense_cap_joint_inference_iter_${FINETUNE_AFTER}.caffemodel
-fi
+NEW_WEIGHTS=output/dense_cap/${TRAIN_IMDB}/dense_cap_joint_inference_iter_${FINETUNE_AFTER1}.caffemodel
+# Finetuning all weights
+./lib/tools/train_net.py --gpu ${GPU_ID} \
+  --solver models/${PT_DIR}/solver_joint_inference_finetune.prototxt \
+  --weights ${NEW_WEIGHTS} \
+  --imdb ${TRAIN_IMDB} \
+  --iters `expr ${ITERS1} - ${FINETUNE_AFTER1}` \
+  --cfg models/${PT_DIR}/dense_cap.yml \
+  ${EXTRA_ARGS}
+NEW_WEIGHTS=output/dense_cap/${TRAIN_IMDB}/dense_cap_joint_inference_finetune_iter_`expr ${ITERS1} - ${FINETUNE_AFTER1}`.caffemodel
 # Training with convnet weights fixed
 ./lib/tools/train_net.py --gpu ${GPU_ID} \
   --solver models/${PT_DIR}/solver_${MODEL_TYPE}.prototxt \
-  --weights ${WEIGHTS} \
+  --weights ${NEW_WEIGHTS} \
   --imdb ${TRAIN_IMDB} \
-  --iters ${FINETUNE_AFTER} \
+  --iters ${FINETUNE_AFTER2} \
   --cfg models/${PT_DIR}/dense_cap.yml \
   ${EXTRA_ARGS}
-NEW_WEIGHTS=output/dense_cap/${TRAIN_IMDB}/dense_cap_${MODEL_TYPE}_iter_${FINETUNE_AFTER}.caffemodel
+NEW_WEIGHTS=output/dense_cap/${TRAIN_IMDB}/dense_cap_${MODEL_TYPE}_iter_${FINETUNE_AFTER2}.caffemodel
 # Finetuning all weights
 ./lib/tools/train_net.py --gpu ${GPU_ID} \
   --solver models/${PT_DIR}/solver_${MODEL_TYPE}_finetune.prototxt \
   --weights ${NEW_WEIGHTS} \
   --imdb ${TRAIN_IMDB} \
-  --iters `expr ${ITERS} - ${FINETUNE_AFTER}` \
+  --iters `expr ${ITERS2} - ${FINETUNE_AFTER2}` \
   --cfg models/${PT_DIR}/dense_cap.yml \
   ${EXTRA_ARGS}
 
+else
+# Training with convnet weights fixed
+./lib/tools/train_net.py --gpu ${GPU_ID} \
+  --solver models/${PT_DIR}/solver_${MODEL_TYPE}.prototxt \
+  --weights ${WEIGHTS} \
+  --imdb ${TRAIN_IMDB} \
+  --iters ${FINETUNE_AFTER1} \
+  --cfg models/${PT_DIR}/dense_cap.yml \
+  ${EXTRA_ARGS}
+NEW_WEIGHTS=output/dense_cap/${TRAIN_IMDB}/dense_cap_${MODEL_TYPE}_iter_${FINETUNE_AFTER1}.caffemodel
+# Finetuning all weights
+./lib/tools/train_net.py --gpu ${GPU_ID} \
+  --solver models/${PT_DIR}/solver_${MODEL_TYPE}_finetune.prototxt \
+  --weights ${NEW_WEIGHTS} \
+  --imdb ${TRAIN_IMDB} \
+  --iters `expr ${ITERS1} - ${FINETUNE_AFTER1}` \
+  --cfg models/${PT_DIR}/dense_cap.yml \
+  ${EXTRA_ARGS}
+fi

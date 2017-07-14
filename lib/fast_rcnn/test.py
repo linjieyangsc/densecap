@@ -229,10 +229,6 @@ def im_detect(feature_net, embed_net, recurrent_net, im, boxes=None, use_box_at 
         #changed according to the global feature shape
         opt_args['global_features'] = np.tile(feature_net.blobs['global_features'].data, (1,proposal_n,1)) 
     
-    # constant image features as an optional input
-    if 'image_features' in recurrent_net.blobs:
-        feat_args['image_features'] = region_features.copy()
-    
     bbox_pred_direct = ('bbox_pred' in feature_net.blobs)
 
     if bbox_pred_direct:

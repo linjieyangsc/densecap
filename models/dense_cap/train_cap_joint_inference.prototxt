@@ -548,7 +548,6 @@ layer {
   top: 'rpn_bbox_targets'
   top: 'rpn_bbox_inside_weights'
   top: 'rpn_bbox_outside_weights'
-  exclude {stage: 'freeze-rpn'}
   python_param {
     module: 'rpn.anchor_target_layer'
     layer: 'AnchorTargetLayer'
@@ -566,7 +565,6 @@ layer {
   propagate_down: 0
   top: "rpn_cls_loss"
   loss_weight: 0.1
-  exclude {stage: 'freeze-rpn'}
   loss_param {
     ignore_label: -1
     normalize: true
@@ -580,7 +578,6 @@ layer {
   bottom: 'rpn_bbox_inside_weights'
   bottom: 'rpn_bbox_outside_weights'
   top: "rpn_loss_bbox"
-  exclude {stage: 'freeze-rpn'}
   loss_weight: 0.05
   smooth_l1_loss_param { sigma: 3.0 }
 }

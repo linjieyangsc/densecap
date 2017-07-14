@@ -67,7 +67,7 @@ layer {
   }
 }
 layer {
-  name: "predict"
+  name: "predict2"
   type: "InnerProduct"
   bottom: "local_global_fusion"
   top: "predict"

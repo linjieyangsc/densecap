@@ -819,7 +819,7 @@ layer {
   python_param {
     module: 'rpn.sentence_data_layer'
     layer: 'SentenceDataLayer'
-    param_str: "{'time_steps': 13, 'phrase_path': 'data/visual_genome/1.0/train_gt_phrases.pkl','mode':'concat'}" 
+    param_str: "{'time_steps': 12, 'mode':'concat'}" 
   }
 }
 layer {
@@ -865,7 +865,7 @@ layer {
   }
 }
 
-
+# NOTE: number of tiles should be the same as TRAIN.BATCH_SIZE in dense_cap.yml
 layer {
   name: "global_features_rep"
   type: "Tile"
@@ -986,7 +986,7 @@ layer {
   top: "bbox_tile"
   tile_param {
     axis: 0
-    tiles: 13
+    tiles: 12
   }
 }
 layer{
@@ -996,7 +996,7 @@ layer{
   top: "bbox_tile_reshape"
   reshape_param {
     shape {
-      dim: 13
+      dim: 12
       dim: -1
       dim: 4
     }
