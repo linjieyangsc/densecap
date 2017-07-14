@@ -10,7 +10,7 @@ This repo is the released code of dense image captioning models described in the
 }
 ```
 All code is provided for research purposes only and without any warranty. Any commercial use requires our consent. When using the code in your research work, please cite the above paper.
-Our code is adapted from the popular [Faster-RCNN repo](https://github.com/rbgirshick/py-faster-rcnn) written by Ross Girshick. The evaluation code is adapted from [COCO captioning evaluation code](https://github.com/tylin/coco-caption).
+Our code is adapted from the popular [Faster-RCNN repo](https://github.com/rbgirshick/py-faster-rcnn) written by Ross Girshick, which is based on the open source deep learning framework [Caffe](http://caffe.berkeleyvision.org/). The evaluation code is adapted from [COCO captioning evaluation code](https://github.com/tylin/coco-caption).
 
 
 ## Compiling ##
