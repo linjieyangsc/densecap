@@ -63,4 +63,4 @@ If you want to test late fusion models with other fusion operators, you need to 
 To visualize the result, you can add `--vis` to the end of the above script. It will generate html pages for each image visualizing the results under folder `output/dense_cap/${TEST_IMDB}/vis`.
 
 ## Contact ##
-If you have any questions regarding the repo, please send email to Linjie Yang (linjie.yang@snap.com).
+If you have any questions regarding the repo, please send email to Linjie Yang (yljatthu@gmail.com).
